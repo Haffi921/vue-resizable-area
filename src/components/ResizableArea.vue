@@ -15,6 +15,7 @@
 
 <script>
 import clamp from 'lodash/clamp';
+import upper from 'lodash/upperCase';
 import ResizeHandle from './ResizeHandle.vue';
 
 export default {
@@ -74,8 +75,8 @@ export default {
 			top: 0,
 			right: 0,
 			bottom: 0,
-			width: this.initWidth,
-			height: this.initHeight,
+			width: 0,
+			height: 0,
 		},
 
 		// Rects
@@ -86,18 +87,24 @@ export default {
 		cursorPadding: 0,
 
 		// Grid
-		gridx: 1,
-		gridy: 1,
-		gbuf: 0.6,
+		gridX: 1,
+		gridY: 1,
+		gridBuf: 0.6,
 
 		// Transition
 		// tSpeed: 1250, // px/s
 		// tStringX: '',
 		// tStringY: '',
 	}),
+	created() {
+		this.rect.width = this.initWidth;
+		this.rect.height = this.initHeight;
+	},
+	beforeMount() {
+	},
 	mounted() {
 		// Initial set up of area
-		this.renameRect();
+		this.applyRect();
 
 		// Update rects
 		this.refreshRect();
@@ -114,9 +121,11 @@ export default {
 	},
 	methods: {
 		// Set style methods
-		renameRect() {
-			this.$el.style.width = `${this.width}px`;
-			this.$el.style.height = `${this.height}px`;
+		applyRect() {
+			this.$el.style.width = `${this.rect.width}px`;
+			this.$el.style.height = `${this.rect.height}px`;
+			this.$el.style.left = `${this.rect.left}px`;
+			this.$el.style.top = `${this.rect.top}px`;
 		},
 
 		// Refresh methods
@@ -230,12 +239,12 @@ export default {
 		// Grid methods
 		setUpGrid() {
 			// Calculate grid
-			[this.gridx, this.gridy] = this.grid.match(/\d+/g);
-			this.gbuf /= 2;
+			[this.gridX, this.gridY] = this.grid.match(/\d+/g);
+			this.gridBuf /= 2;
 
 			// If grid is bigger then minLengths, then minLength is mute
-			if (this.minWidth < this.gridx) this.minWidth = this.gridx;
-			if (this.minHeight < this.gridy) this.minHeight = this.gridy;
+			if (this.minWidth < this.gridX) this.minWidth = this.gridX;
+			if (this.minHeight < this.gridY) this.minHeight = this.gridY;
 
 			// Transition string
 			// this.tSpeed = this.gridx / this.tSpeed;
@@ -244,11 +253,11 @@ export default {
 		applyGrid(value, grid) {
 			return Math.round(value / grid) * grid;
 		},
-		applyGridBuf(value, parentValue, grid, buf) {
+		applyGridBuf(newValue, currentValue, grid, buf) {
 			const gridBuf = grid * buf;
-			const valueBuf = value < parentValue
-				? value + gridBuf
-				: value - gridBuf;
+			const valueBuf = newValue < currentValue
+				? newValue + gridBuf
+				: newValue - gridBuf;
 
 			return this.applyGrid(valueBuf, grid);
 		},
@@ -279,8 +288,9 @@ export default {
 
 			// Apply grid
 			if (this.grid) {
+				console.log(`grid${upper(xy)}`);
 				wh = this.applyGridBuf(
-					wh, this.domRect[dimension], this[`grid${xy}`], this.gbuf,
+					wh, this.domRect[dimension], this[`grid${upper(xy)}`], this.gridBuf,
 				);
 				if (this.domRect[dimension] !== wh) {
 					// Apply styles
@@ -312,7 +322,7 @@ export default {
 
 			if (this.grid) {
 				lt = this.applyGridBuf(
-					lt, this.domRect[position], this[`grid${xy}`], this.gbuf,
+					lt, this.domRect[position], this[`grid${upper(xy)}`], this.gridBuf,
 				);
 				if (this.getLeftOrTop(xy) !== lt) {
 					// Apply styles
