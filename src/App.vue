@@ -1,28 +1,35 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
-  </div>
+    <div id="app">
+        <ResizableArea />
+        <!-- grid="[200, 200]" :minWidth="200" :minHeight="200" /> -->
+    </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue';
+import ResizableArea from './components/ResizableArea.vue';
 
 export default {
-  name: 'App',
-  components: {
-    HelloWorld,
-  },
+	name: 'App',
+	components: {
+		ResizableArea,
+	},
 };
 </script>
 
 <style lang="less">
+body {
+    margin: 0;
+    background: darkgray;
+    box-sizing: border-box;
+    z-index: 1000;
+}
+
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+    font-family: Avenir, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: white;
+    height: calc(100vh - 20px);
+    padding: 10px;
 }
 </style>
