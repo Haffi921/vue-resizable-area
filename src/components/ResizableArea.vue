@@ -14,8 +14,9 @@
 </template>
 
 <script>
+/* eslint-disable no-else-return,consistent-return */
+
 import clamp from 'lodash/clamp';
-import { getMethod } from './utils';
 import ResizeHandle from './ResizeHandle.vue';
 
 export default {
@@ -45,6 +46,7 @@ export default {
 		},
 		grid: {
 			type: String,
+			default: '[200, 200]',
 			validator(value) {
 				return value.match(/\[\d+, \d+]/);
 			},
@@ -79,38 +81,28 @@ export default {
 	}),
 	mounted() {
 		// Initial set up of area
-		this.$el.style.width = `${this.width}px`;
-		this.$el.style.height = `${this.height}px`;
+		this.renameRect();
 
 		// Update rects
 		this.refreshRect();
 		this.refreshParent();
 
 		// Update rects on window change
-		window.addEventListener('resize', this.refreshRect);
-		window.addEventListener('scroll', this.refreshRect);
-		window.addEventListener('scroll', this.refreshParent);
-		window.addEventListener('resize', this.refreshParent);
+		this.setWindowChangeListeners();
 
 		// Cursor padding is half the handle width
 		this.cursorPadding = Math.floor(this.handleWidth / 2);
 
 		// Grid
-		if (this.grid) {
-			// Calculate grid
-			[this.gridx, this.gridy] = this.grid.match(/\d+/g);
-			this.gbuf /= 2;
-
-			// If grid is bigger then minLengths, then minLength is mute
-			if (this.minWidth < this.gridx) this.minWidth = this.gridx;
-			if (this.minHeight < this.gridy) this.minHeight = this.gridy;
-
-			// Transition string
-			// this.tSpeed = this.gridx / this.tSpeed;
-			// this.tStringX = `${this.tSpeed}s ease-in`;
-		}
+		if (this.grid) this.setUpGrid();
 	},
 	methods: {
+		// Set style methods
+		renameRect() {
+			this.$el.style.width = `${this.width}px`;
+			this.$el.style.height = `${this.height}px`;
+		},
+
 		// Refresh methods
 		refreshRect() {
 			this.rect = this.$el.getBoundingClientRect();
@@ -129,10 +121,36 @@ export default {
 			};
 		},
 
+		// Event listener methods
+		setWindowChangeListeners() {
+			window.addEventListener('resize', this.refreshRect);
+			window.addEventListener('scroll', this.refreshRect);
+			window.addEventListener('scroll', this.refreshParent);
+			window.addEventListener('resize', this.refreshParent);
+		},
+
 		// Binding method
-		getMove: getMethod,
+		getMove(moveName) {
+			return this[moveName];
+		},
+
+		// Get self methods
+		getMinWidthOrHeight(xy) {
+			if (xy === 'x') {
+				return this.minWidth;
+			} else if (xy === 'y') {
+				return this.minHeight;
+			}
+		},
 
 		// Get cursor methods
+		getRelativeCursor(xy, e) {
+			if (xy === 'x') {
+				return this.getRelativeCursorX(e);
+			} else if (xy === 'y') {
+				return this.getRelativeCursorY(e);
+			}
+		},
 		getRelativeCursorX(e) {
 			// Get cursor x-position
 			return e.clientX
@@ -147,6 +165,20 @@ export default {
 		},
 
 		// Get parent methods
+		getParentXY(xy) {
+			if (xy === 'x') {
+				return this.getParentX();
+			} else if (xy === 'y') {
+				return this.getParentY();
+			}
+		},
+		getParentWH(xy) {
+			if (xy === 'x') {
+				return this.getParentW();
+			} else if (xy === 'y') {
+				return this.getParentH();
+			}
+		},
 		getParentX() {
 			return this.parent.x + this.parent.padding.left;
 		},
@@ -165,6 +197,20 @@ export default {
 		},
 
 		// Get rect methods
+		getLeftOrTop(xy) {
+			if (xy === 'x') {
+				return this.getLeftX();
+			} else if (xy === 'y') {
+				return this.getTopY();
+			}
+		},
+		getRightOrBottom(xy) {
+			if (xy === 'x') {
+				return this.getRightX();
+			} else if (xy === 'y') {
+				return this.getBottomY();
+			}
+		},
 		getLeftX() {
 			return this.rect.left - this.getParentX();
 		},
@@ -179,143 +225,122 @@ export default {
 		},
 
 		// Grid methods
+		setUpGrid() {
+			// Calculate grid
+			[this.gridx, this.gridy] = this.grid.match(/\d+/g);
+			this.gbuf /= 2;
+
+			// If grid is bigger then minLengths, then minLength is mute
+			if (this.minWidth < this.gridx) this.minWidth = this.gridx;
+			if (this.minHeight < this.gridy) this.minHeight = this.gridy;
+
+			// Transition string
+			// this.tSpeed = this.gridx / this.tSpeed;
+			// this.tStringX = `${this.tSpeed}s ease-in`;
+		},
 		applyGrid(value, grid) {
 			return Math.round(value / grid) * grid;
 		},
 		applyGridBuf(value, parentValue, grid, buf) {
-			const gridbuf = grid * buf;
-			const widthBuf = value < parentValue
-				? value + gridbuf
-				: value - gridbuf;
+			const gridBuf = grid * buf;
+			const valueBuf = value < parentValue
+				? value + gridBuf
+				: value - gridBuf;
 
-			return this.applyGrid(widthBuf, grid);
+			return this.applyGrid(valueBuf, grid);
 		},
 
 		// Transition
-		removeTransition() {
-			this.$el.style.removeProperty('transition');
+		// removeTransition() {
+		// 	this.$el.style.removeProperty('transition');
+		// },
+
+		// Move methods
+		dimensionMove(xy, dimension, e) {
+			// Get cursor x or y-position
+			let wh = this.getRelativeCursor(xy, e)
+				// ...relative to left or top-side
+				- this.getLeftOrTop(xy)
+				// Small padding
+				+ this.cursorPadding;
+
+			// max is parent minus rect distance from left/top side
+			const max = this.getParentWH(xy) - this.getLeftOrTop(xy);
+			const min = this.getMinWidthOrHeight(xy);
+
+			// Clamp wh between min and max values
+			wh = clamp(wh, min, max);
+
+			// Apply grid
+			if (this.grid) {
+				wh = this.applyGridBuf(
+					wh, this.rect[dimension], this[`grid${xy}`], this.gbuf,
+				);
+				if (this.rect[dimension] !== wh) {
+					// Apply styles
+					this.$el.style[dimension] = `${wh}px`;
+				}
+			} else {
+				// Apply styles
+				this.$el.style[dimension] = `${wh}px`;
+			}
+		},
+		positionDimensionMove(xy, position, dimension, e) {
+			// Get cursor x or y-position relative to parent
+			let lt = this.getRelativeCursor(xy, e)
+				// Small cursor padding
+				- this.cursorPadding;
+
+			// Get right or bottom side XY position
+			const rb = this.getRightOrBottom(xy);
+
+			const min = 0;
+			const max = rb - this.getMinWidthOrHeight(xy);
+
+			// Clamp leftX between min and max
+			lt = clamp(lt, min, max);
+
+			if (this.grid) {
+				lt = this.applyGridBuf(
+					lt, this.rect[position], this[`grid${xy}`], this.gbuf,
+				);
+				if (this.getLeftOrTop(xy) !== lt) {
+					// Apply styles
+					this.$el.style[position] = `${lt}px`;
+					this.$el.style[dimension] = `${rb - lt}px`;
+				}
+			} else {
+				// Apply styles
+				this.$el.style[position] = `${lt}px`;
+				this.$el.style[dimension] = `${rb - lt}px`;
+			}
 		},
 
 		// Side moves
 		leftMove(e) {
-			// Get cursor x-position relative to parent
-			let leftX = this.getRelativeCursorX(e)
-				// Small cursor padding
-				- this.cursorPadding;
-
-			// Get right side x-position
-			const rightX = this.getRightX();
-			console.log(rightX);
-
-			// Clamp leftX between min and max
-			leftX = clamp(leftX, 0, rightX - this.minWidth);
-
-			if (this.grid) {
-				leftX = this.applyGridBuf(
-					leftX, this.rect.left, this.gridx, this.gbuf,
-				);
-				if (this.getLeftX() !== leftX) {
-					// Apply styles
-					this.$el.style.left = `${leftX}px`;
-					this.$el.style.width = `${rightX - leftX}px`;
-				}
-			} else {
-				// Apply styles
-				this.$el.style.left = `${leftX}px`;
-				this.$el.style.width = `${rightX - leftX}px`;
-			}
+			// Apply changes
+			this.positionDimensionMove('x', 'left', 'width', e);
 
 			// Refresh rect
 			this.refreshRect();
 		},
 		topMove(e) {
-			// Get relative cursor y-position
-			let topY = this.getRelativeCursorY(e)
-				// Small cursor padding
-				- this.cursorPadding;
-
-			// Get bottom side y-position
-			const bottomY = this.getBottomY();
-
-			// Clamp topY between min and max
-			topY = clamp(topY, 0, bottomY - this.minHeight);
-
-			if (this.grid) {
-				topY = this.applyGridBuf(
-					topY, this.rect.top, this.gridy, this.gbuf,
-				);
-				if (this.getTopY() !== topY) {
-					// Apply styles
-					this.$el.style.top = `${topY}px`;
-					this.$el.style.height = `${bottomY - topY}px`;
-				}
-			} else {
-				// Apply styles
-				this.$el.style.top = `${topY}px`;
-				this.$el.style.height = `${bottomY - topY}px`;
-			}
+			// Apply changes
+			this.positionDimensionMove('y', 'top', 'height', e);
 
 			// Refresh rect
 			this.refreshRect();
 		},
 		rightMove(e) {
-			// Get cursor x-position
-			let w = this.getRelativeCursorX(e)
-				// ...relative to left-side
-				- this.getLeftX()
-				// Small padding
-				+ this.cursorPadding;
+			// Apply changes
+			this.dimensionMove('x', 'width', e);
 
-			// maxWidth is parent.width minus rect distance from left side
-			const maxWidth = this.getParentW() - this.getLeftX();
-
-			// Clamp w between min and max width
-			w = clamp(w, this.minWidth, maxWidth);
-
-			// Apply grid
-			if (this.grid) {
-				w = this.applyGridBuf(
-					w, this.rect.width, this.gridx, this.gbuf,
-				);
-				if (this.rect.width !== w) {
-					// Apply styles
-					this.$el.style.width = `${w}px`;
-				}
-			} else {
-				// Apply styles
-				this.$el.style.width = `${w}px`;
-			}
-
-			// refresh rect
+			// Refresh rect
 			this.refreshRect();
 		},
 		bottomMove(e) {
-			// Get cursor y-position
-			let h = this.getRelativeCursorY(e)
-				// ...relative to left-side
-				- this.getTopY()
-				// Small padding
-				+ this.cursorPadding;
-
-			// maxHeight is parent.height minus rect distance from left side
-			const maxHeight = this.getParentH() - this.getTopY();
-
-			// Clamp h between min and max height
-			h = clamp(h, this.minHeight, maxHeight);
-
-			// Apply grid
-			if (this.grid) {
-				h = this.applyGridBuf(
-					h, this.rect.height, this.gridy, this.gbuf,
-				);
-				if (this.rect.height !== h) {
-					// Apply styles
-					this.$el.style.height = `${h}px`;
-				}
-			} else {
-				// Apply styles
-				this.$el.style.height = `${h}px`;
-			}
+			// Apply changes
+			this.dimensionMove('y', 'height', e);
 
 			// Refresh rect
 			this.refreshRect();
@@ -323,20 +348,24 @@ export default {
 
 		// Corner moves
 		topLeftMove(e) {
-			this.topMove(e);
-			this.leftMove(e);
+			this.positionDimensionMove('x', 'left', 'width', e);
+			this.positionDimensionMove('y', 'top', 'height', e);
+			this.refreshRect();
 		},
 		topRightMove(e) {
-			this.topMove(e);
-			this.rightMove(e);
+			this.positionDimensionMove('y', 'top', 'height', e);
+			this.dimensionMove('x', 'width', e);
+			this.refreshRect();
 		},
 		bottomRightMove(e) {
-			this.bottomMove(e);
-			this.rightMove(e);
+			this.dimensionMove('x', 'width', e);
+			this.dimensionMove('y', 'height', e);
+			this.refreshRect();
 		},
 		bottomLeftMove(e) {
-			this.bottomMove(e);
-			this.leftMove(e);
+			this.dimensionMove('y', 'height', e);
+			this.positionDimensionMove('x', 'left', 'width', e);
+			this.refreshRect();
 		},
 	},
 };
