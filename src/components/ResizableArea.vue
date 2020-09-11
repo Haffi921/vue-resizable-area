@@ -14,8 +14,6 @@
 </template>
 
 <script>
-/* eslint-disable no-else-return,consistent-return */
-
 import clamp from 'lodash/clamp';
 import ResizeHandle from './ResizeHandle.vue';
 
@@ -28,11 +26,11 @@ export default {
 			type: Number,
 			default: 6,
 		},
-		width: {
+		initWidth: {
 			type: Number,
 			default: 200,
 		},
-		height: {
+		initHeight: {
 			type: Number,
 			default: 200,
 		},
@@ -43,6 +41,14 @@ export default {
 		minHeight: {
 			type: Number,
 			default: 35,
+		},
+		maxWidth: {
+			type: Number,
+			default: Infinity,
+		},
+		maxHeight: {
+			type: Number,
+			default: Infinity,
 		},
 		grid: {
 			type: String,
@@ -62,8 +68,18 @@ export default {
 			bottomLeft: 'bottom-left',
 		},
 
+		// Self
+		rect: {
+			left: 0,
+			top: 0,
+			right: 0,
+			bottom: 0,
+			width: this.initWidth,
+			height: this.initHeight,
+		},
+
 		// Rects
-		rect: {},
+		domRect: {},
 		parent: {},
 
 		// Paddings for cursor on handle
@@ -105,7 +121,7 @@ export default {
 
 		// Refresh methods
 		refreshRect() {
-			this.rect = this.$el.getBoundingClientRect();
+			this.domRect = this.$el.getBoundingClientRect();
 		},
 		refreshParent() {
 			const parentPadding = window.getComputedStyle(
@@ -134,22 +150,25 @@ export default {
 			return this[moveName];
 		},
 
+		// Util methods
+		xyConditional(xy, x, y) {
+			if (xy === 'x') {
+				return x;
+			}
+			if (xy === 'y') {
+				return y;
+			}
+			throw TypeError(`xy is ${xy} but it should be either 'x' or 'y'`);
+		},
+
 		// Get self methods
 		getMinWidthOrHeight(xy) {
-			if (xy === 'x') {
-				return this.minWidth;
-			} else if (xy === 'y') {
-				return this.minHeight;
-			}
+			return this.xyConditional(xy, this.minWidth, this.minHeight);
 		},
 
 		// Get cursor methods
 		getRelativeCursor(xy, e) {
-			if (xy === 'x') {
-				return this.getRelativeCursorX(e);
-			} else if (xy === 'y') {
-				return this.getRelativeCursorY(e);
-			}
+			return this.xyConditional(xy, this.getRelativeCursorX(e), this.getRelativeCursorY(e));
 		},
 		getRelativeCursorX(e) {
 			// Get cursor x-position
@@ -166,18 +185,10 @@ export default {
 
 		// Get parent methods
 		getParentXY(xy) {
-			if (xy === 'x') {
-				return this.getParentX();
-			} else if (xy === 'y') {
-				return this.getParentY();
-			}
+			return this.xyConditional(xy, this.getParentX(), this.getParentY());
 		},
 		getParentWH(xy) {
-			if (xy === 'x') {
-				return this.getParentW();
-			} else if (xy === 'y') {
-				return this.getParentH();
-			}
+			return this.xyConditional(xy, this.getParentW(), this.getParentH());
 		},
 		getParentX() {
 			return this.parent.x + this.parent.padding.left;
@@ -198,30 +209,22 @@ export default {
 
 		// Get rect methods
 		getLeftOrTop(xy) {
-			if (xy === 'x') {
-				return this.getLeftX();
-			} else if (xy === 'y') {
-				return this.getTopY();
-			}
+			return this.xyConditional(xy, this.getLeftX(), this.getTopY());
 		},
 		getRightOrBottom(xy) {
-			if (xy === 'x') {
-				return this.getRightX();
-			} else if (xy === 'y') {
-				return this.getBottomY();
-			}
+			return this.xyConditional(xy, this.getRightX(), this.getBottomY());
 		},
 		getLeftX() {
-			return this.rect.left - this.getParentX();
+			return this.domRect.left - this.getParentX();
 		},
 		getTopY() {
-			return this.rect.top - this.getParentY();
+			return this.domRect.top - this.getParentY();
 		},
 		getRightX() {
-			return this.rect.right - this.getParentX();
+			return this.domRect.right - this.getParentX();
 		},
 		getBottomY() {
-			return this.rect.bottom - this.getParentY();
+			return this.domRect.bottom - this.getParentY();
 		},
 
 		// Grid methods
@@ -256,7 +259,10 @@ export default {
 		// },
 
 		// Move methods
-		dimensionMove(xy, dimension, e) {
+		dimensionMove(xy, e) {
+			// Get dimension name
+			const dimension = this.xyConditional(xy, 'width', 'height');
+
 			// Get cursor x or y-position
 			let wh = this.getRelativeCursor(xy, e)
 				// ...relative to left or top-side
@@ -274,9 +280,9 @@ export default {
 			// Apply grid
 			if (this.grid) {
 				wh = this.applyGridBuf(
-					wh, this.rect[dimension], this[`grid${xy}`], this.gbuf,
+					wh, this.domRect[dimension], this[`grid${xy}`], this.gbuf,
 				);
-				if (this.rect[dimension] !== wh) {
+				if (this.domRect[dimension] !== wh) {
 					// Apply styles
 					this.$el.style[dimension] = `${wh}px`;
 				}
@@ -285,7 +291,11 @@ export default {
 				this.$el.style[dimension] = `${wh}px`;
 			}
 		},
-		positionDimensionMove(xy, position, dimension, e) {
+		positionDimensionMove(xy, e) {
+			// Get position and dimension name
+			const position = this.xyConditional(xy, 'left', 'top');
+			const dimension = this.xyConditional(xy, 'width', 'height');
+
 			// Get cursor x or y-position relative to parent
 			let lt = this.getRelativeCursor(xy, e)
 				// Small cursor padding
@@ -302,7 +312,7 @@ export default {
 
 			if (this.grid) {
 				lt = this.applyGridBuf(
-					lt, this.rect[position], this[`grid${xy}`], this.gbuf,
+					lt, this.domRect[position], this[`grid${xy}`], this.gbuf,
 				);
 				if (this.getLeftOrTop(xy) !== lt) {
 					// Apply styles
@@ -318,53 +328,65 @@ export default {
 
 		// Side moves
 		leftMove(e) {
-			// Apply changes
-			this.positionDimensionMove('x', 'left', 'width', e);
+			/* Apply changes */
+			this.positionDimensionMove('x', e); // Left
 
-			// Refresh rect
+			/* Refresh */
 			this.refreshRect();
 		},
 		topMove(e) {
-			// Apply changes
-			this.positionDimensionMove('y', 'top', 'height', e);
+			/* Apply changes */
+			this.positionDimensionMove('y', e); // Top
 
-			// Refresh rect
+			/* Refresh */
 			this.refreshRect();
 		},
 		rightMove(e) {
-			// Apply changes
-			this.dimensionMove('x', 'width', e);
+			/* Apply changes */
+			this.dimensionMove('x', e); // Right
 
-			// Refresh rect
+			/* Refresh */
 			this.refreshRect();
 		},
 		bottomMove(e) {
-			// Apply changes
-			this.dimensionMove('y', 'height', e);
+			/* Apply changes */
+			this.dimensionMove('y', e); // Bottom
 
-			// Refresh rect
+			/* Refresh */
 			this.refreshRect();
 		},
 
 		// Corner moves
 		topLeftMove(e) {
-			this.positionDimensionMove('x', 'left', 'width', e);
-			this.positionDimensionMove('y', 'top', 'height', e);
+			/* Apply changes */
+			this.positionDimensionMove('y', e); // Top
+			this.positionDimensionMove('x', e); // Left
+
+			/* Refresh */
 			this.refreshRect();
 		},
 		topRightMove(e) {
-			this.positionDimensionMove('y', 'top', 'height', e);
-			this.dimensionMove('x', 'width', e);
+			/* Apply changes */
+			this.positionDimensionMove('y', e);	// Top
+			this.dimensionMove('x', e); 		// Right
+
+			/* Refresh */
 			this.refreshRect();
 		},
 		bottomRightMove(e) {
-			this.dimensionMove('x', 'width', e);
-			this.dimensionMove('y', 'height', e);
+			/* Apply changes */
+			this.dimensionMove('y', e);	// Bottom
+			this.dimensionMove('x', e);	// Right
+
+			/* Refresh */
 			this.refreshRect();
 		},
 		bottomLeftMove(e) {
-			this.dimensionMove('y', 'height', e);
-			this.positionDimensionMove('x', 'left', 'width', e);
+			/* Apply changes */
+			this.dimensionMove('y', e);			// Bottom
+			this.positionDimensionMove('x', e);	// Left
+
+			/* Refresh */
 			this.refreshRect();
 		},
 	},
