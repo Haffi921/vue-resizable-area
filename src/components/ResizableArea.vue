@@ -268,7 +268,6 @@ export default {
 		},
 		// Transition methods
 		setUpTransition() {
-			console.log(this.gridX / this.tSpeed);
 			const durationX = this.gridX / this.tSpeed;
 			const durationY = this.gridY / this.tSpeed;
 			const stringX = `${durationX}s ${this.tFunction}`;
