@@ -161,10 +161,22 @@ export default {
 		/* Util methods */
 		xyConditional(xy, x, y) {
 			if (xy === 'x') {
-				return x;
+				try {
+					return x();
+				} catch (e) {
+					if (e instanceof TypeError) {
+						return x;
+					} throw e;
+				}
 			}
 			if (xy === 'y') {
-				return y;
+				try {
+					return y();
+				} catch (e) {
+					if (e instanceof TypeError) {
+						return y;
+					} throw e;
+				}
 			}
 			throw TypeError(`xy is ${xy} but it should be either 'x' or 'y'`);
 		},
@@ -172,12 +184,69 @@ export default {
 		/* Getters */
 		// Get self methods
 		getMinWidthOrHeight(xy) {
-			return this.xyConditional(xy, this.minWidth, this.minHeight);
+			return this.xyConditional(xy, this.getMinWidth, this.getMinHeight);
 		},
-
+		getMinWidth() {
+			return this.minWidth;
+		},
+		getMinHeight() {
+			return this.minHeight;
+		},
+		getMaxWidthOrHeight(xy) {
+			return this.xyConditional(xy, this.getMaxWidth, this.getMaxHeight);
+		},
+		getMaxWidth() {
+			return this.getParentW() - this.getLeftX();
+		},
+		getMaxHeight() {
+			return this.getParentH() - this.getTopY();
+		},
+		// Get rect methods
+		getLeftOrTop(xy) {
+			return this.xyConditional(xy, this.getLeftX, this.getTopY);
+		},
+		getRightOrBottom(xy) {
+			return this.xyConditional(xy, this.getRightX, this.getBottomY);
+		},
+		getLeftX() {
+			return this.rect.left;// - this.getParentX();
+		},
+		getTopY() {
+			return this.rect.top;// - this.getParentY();
+		},
+		getRightX() {
+			return this.rect.right;// - this.getParentX();
+		},
+		getBottomY() {
+			return this.rect.bottom;// - this.getParentY();
+		},
+		// Get parent methods
+		getParentWH(xy) {
+			return this.xyConditional(xy, this.getParentW, this.getParentH);
+		},
+		getParentX() {
+			return this.parentRect.x + this.parentRect.padding.left;
+		},
+		getParentY() {
+			return this.parentRect.y + this.parentRect.padding.top;
+		},
+		getParentW() {
+			const { left, right } = this.parentRect.padding;
+			const totalXPadding = left + right;
+			return this.parentRect.width - totalXPadding;
+		},
+		getParentH() {
+			const { top, bottom } = this.parentRect.padding;
+			const totalYPadding = top + bottom;
+			return this.parentRect.height - totalYPadding;
+		},
 		// Get cursor methods
 		getRelativeCursor(xy, e) {
-			return this.xyConditional(xy, this.getRelativeCursorX(e), this.getRelativeCursorY(e));
+			return this.xyConditional(
+				xy,
+				this.getRelativeCursorX.bind(this, e),
+				this.getRelativeCursorY.bind(this, e),
+			);
 		},
 		getRelativeCursorX(e) {
 			// Get cursor x-position
@@ -192,51 +261,7 @@ export default {
 			- this.getParentY();
 		},
 
-		// Get parent methods
-		getParentXY(xy) {
-			return this.xyConditional(xy, this.getParentX(), this.getParentY());
-		},
-		getParentWH(xy) {
-			return this.xyConditional(xy, this.getParentW(), this.getParentH());
-		},
-		getParentX() {
-			return this.parent.x + this.parent.padding.left;
-		},
-		getParentY() {
-			return this.parent.y + this.parent.padding.top;
-		},
-		getParentW() {
-			const { left, right } = this.parent.padding;
-			const totalXPadding = left + right;
-			return this.parent.width - totalXPadding;
-		},
-		getParentH() {
-			const { top, bottom } = this.parent.padding;
-			const totalYPadding = top + bottom;
-			return this.parent.height - totalYPadding;
-		},
-
-		// Get rect methods
-		getLeftOrTop(xy) {
-			return this.xyConditional(xy, this.getLeftX(), this.getTopY());
-		},
-		getRightOrBottom(xy) {
-			return this.xyConditional(xy, this.getRightX(), this.getBottomY());
-		},
-		getLeftX() {
-			return this.domRect.left - this.getParentX();
-		},
-		getTopY() {
-			return this.domRect.top - this.getParentY();
-		},
-		getRightX() {
-			return this.domRect.right - this.getParentX();
-		},
-		getBottomY() {
-			return this.domRect.bottom - this.getParentY();
-		},
-
-		// Grid methods
+		/* Grid methods */
 		setUpGrid() {
 			// Calculate grid
 			[this.gridX, this.gridY] = this.grid.match(/\d+/g).map(Number);
