@@ -113,9 +113,16 @@ export default {
 		// Paddings for cursor on handle
 		cursorPadding: 0,
 
+		// Width and Height
+		minW: 0,
+		minH: 0,
+		maxW: 0,
+		maxH: 0,
+
 		// Grid
 		gridX: 1,
 		gridY: 1,
+		gridB: 0,
 	}),
 	created() {
 		this.rect.width = this.initWidth;
@@ -125,6 +132,12 @@ export default {
 
 		// Cursor padding is half the handle width
 		this.cursorPadding = Math.floor(this.handleWidth / 2);
+
+		// Width and Height
+		this.minW = this.minWidth;
+		this.minH = this.minHeight;
+		this.maxW = this.maxWidth;
+		this.maxH = this.maxHeight;
 	},
 	mounted() {
 		// Grid
@@ -213,11 +226,11 @@ export default {
 		setUpGrid() {
 			// Calculate grid
 			[this.gridX, this.gridY] = this.grid.match(/\d+/g).map(Number);
-			this.gridBuf /= 2;
+			this.gridB = this.gridBuf / 2;
 
 			// If grid is bigger then minLengths, then minLength is mute
-			if (this.minWidth < this.gridX) this.minWidth = this.gridX;
-			if (this.minHeight < this.gridY) this.minHeight = this.gridY;
+			if (this.minW < this.gridX) this.minW = this.gridX;
+			if (this.minH < this.gridY) this.minH = this.gridY;
 
 			this.rect.width = this.applyGrid(this.rect.width, this.gridX);
 			this.rect.height = this.applyGrid(this.rect.height, this.gridY);
@@ -285,10 +298,10 @@ export default {
 			return this.xyConditional(xy, this.getMinWidth, this.getMinHeight);
 		},
 		getMinWidth() {
-			return this.minWidth;
+			return this.minW;
 		},
 		getMinHeight() {
-			return this.minHeight;
+			return this.minH;
 		},
 		getMaxWidthOrHeight(xy) {
 			return this.xyConditional(xy, this.getMaxWidth, this.getMaxHeight);
@@ -385,7 +398,7 @@ export default {
 				const grid = `grid${upper(xy)}`;
 				wh = this.applyGridBuf(
 					wh, this.rect[dimension], this.getMaxWidthOrHeight(xy),
-					this[grid], this.gridBuf,
+					this[grid], this.gridB,
 				);
 			}
 
@@ -413,7 +426,7 @@ export default {
 				const grid = `grid${upper(xy)}`;
 				lt = this.applyGridBuf(
 					lt, this.rect[position], this.getParentWH(xy),
-					this[grid], this.gridBuf,
+					this[grid], this.gridB,
 				);
 			}
 
