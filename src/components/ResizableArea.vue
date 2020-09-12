@@ -35,11 +35,11 @@ export default {
 		},
 		initWidth: {
 			type: Number,
-			default: 200,
+			default: 250,
 		},
 		initHeight: {
 			type: Number,
-			default: 200,
+			default: 250,
 		},
 		minWidth: {
 			type: Number,
