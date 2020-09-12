@@ -144,13 +144,49 @@ export default {
 				left: parentPadding[3 % parentPadding.length],
 			};
 		},
-
+		reloadRect(xy) {
+			this.reloadWH(xy);
+			this.reloadLT(xy);
+		},
+		reloadWH(xy) {
+			const dimension = this.xyConditional(xy, 'width', 'height');
+			const min = this.getMinWidthOrHeight(xy);
+			const max = this.getMaxWidthOrHeight(xy);
+			const wh = this.rect[dimension];
+			this.rect[dimension] = clamp(wh, min, max);
+		},
+		reloadLT(xy) {
+			const dimension = this.xyConditional(xy, 'left', 'top');
+			const min = this.getMinWidthOrHeight(xy);
+			const parentWH = this.getParentWH(xy);
+			if (this.rect[dimension] > parentWH - min) {
+				this.rect[dimension] = parentWH - min;
+			}
+		},
+		reloadWH_grid(xy) {
+			const position = this.xyConditional(xy, 'left', 'right');
+			const dimension = this.xyConditional(xy, 'width', 'height');
+			const grid = this[`grid${upper(xy)}`];
+			this.rect[position] = Math.floor(this.rect[position] / grid) * grid;
+			this.rect[dimension] = Math.floor(this.rect[dimension] / grid) * grid;
+		},
 		// Event listener methods
+		onWindowResize() {
+			this.refreshParent();
+
+			this.reloadRect('x');
+			this.reloadRect('y');
+
+			if (this.grid) {
+				this.reloadWH_grid('x');
+				this.reloadWH_grid('y');
+			}
+
+			this.updateDOM();
+		},
 		setWindowChangeListeners() {
-			window.addEventListener('resize', this.refreshRect);
-			window.addEventListener('scroll', this.refreshRect);
 			window.addEventListener('scroll', this.refreshParent);
-			window.addEventListener('resize', this.refreshParent);
+			window.addEventListener('resize', this.onWindowResize);
 		},
 
 		/* Binding method */
