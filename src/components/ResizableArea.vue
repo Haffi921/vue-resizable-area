@@ -29,10 +29,13 @@ export default {
 		ResizeHandle,
 	},
 	props: {
+		// Width of drag handles
 		handleWidth: {
 			type: Number,
 			default: 6,
 		},
+
+		// Width and Height
 		initWidth: {
 			type: Number,
 			default: 250,
@@ -57,6 +60,8 @@ export default {
 			type: Number,
 			default: Infinity,
 		},
+
+		// Grid
 		grid: {
 			type: String,
 			default: '[200, 200]',
@@ -71,6 +76,8 @@ export default {
 				return value >= 0 && value <= 1;
 			},
 		},
+
+		// Transition
 		transition: {
 			type: Boolean,
 			default: false,
@@ -125,19 +132,20 @@ export default {
 		gridB: 0,
 	}),
 	created() {
-		this.rect.width = this.initWidth;
-		this.rect.height = this.initHeight;
-		this.rect.right = this.rect.left + this.rect.width;
-		this.rect.bottom = this.rect.top + this.rect.height;
-
 		// Cursor padding is half the handle width
 		this.cursorPadding = Math.floor(this.handleWidth / 2);
 
 		// Width and Height
+		this.rect.width = this.initWidth;
+		this.rect.height = this.initHeight;
 		this.minW = this.minWidth;
 		this.minH = this.minHeight;
 		this.maxW = this.maxWidth;
 		this.maxH = this.maxHeight;
+
+		// Initialize right and button
+		this.rect.right = this.rect.left + this.rect.width;
+		this.rect.bottom = this.rect.top + this.rect.height;
 	},
 	mounted() {
 		// Grid
