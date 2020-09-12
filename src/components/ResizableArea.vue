@@ -107,6 +107,9 @@ export default {
 		this.rect.height = this.initHeight;
 		this.rect.right = this.rect.left + this.rect.width;
 		this.rect.bottom = this.rect.top + this.rect.height;
+
+		// Cursor padding is half the handle width
+		this.cursorPadding = Math.floor(this.handleWidth / 2);
 	},
 	mounted() {
 		// Initial set up of area
