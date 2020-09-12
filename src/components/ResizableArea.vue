@@ -202,8 +202,8 @@ export default {
 			const position = this.xyConditional(xy, 'left', 'top');
 			const dimension = this.xyConditional(xy, 'width', 'height');
 			const grid = this[`grid${upper(xy)}`];
-			this.rect[position] = Math.floor(this.rect[position] / grid) * grid;
-			this.rect[dimension] = Math.floor(this.rect[dimension] / grid) * grid;
+			this.rect[position] = this.applyGridFloor(this.rect[position], grid);
+			this.rect[dimension] = this.applyGridFloor(this.rect[dimension], grid);
 		},
 		// Event listener methods
 		onWindowResize() {
@@ -235,11 +235,23 @@ export default {
 			if (this.minW < this.gridX) this.minW = this.gridX;
 			if (this.minH < this.gridY) this.minH = this.gridY;
 
-			this.rect.width = this.applyGrid(this.rect.width, this.gridX);
-			this.rect.height = this.applyGrid(this.rect.height, this.gridY);
+			// Floor rect to next grid level
+			let width = this.applyGridFloor(this.rect.width, this.gridX);
+			let height = this.applyGridFloor(this.rect.height, this.gridY);
+
+			// If rect has been floored to 0, rectify
+			if (width <= 0) width = this.gridX;
+			if (height <= 0) height = this.gridY;
+
+			// Set rect to grid
+			this.rect.width = width;
+			this.rect.height = height;
 		},
 		applyGrid(value, grid) {
 			return Math.round(value / grid) * grid;
+		},
+		applyGridFloor(value, grid) {
+			return Math.floor(value / grid) * grid;
 		},
 		applyGridBuf(newValue, currentValue, maxValue, grid, buf) {
 			if (newValue > currentValue
