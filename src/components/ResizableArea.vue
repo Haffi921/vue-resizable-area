@@ -142,10 +142,6 @@ export default {
 		this.minH = this.minHeight;
 		this.maxW = this.maxWidth;
 		this.maxH = this.maxHeight;
-
-		// Initialize right and button
-		this.rect.right = this.rect.left + this.rect.width;
-		this.rect.bottom = this.rect.top + this.rect.height;
 	},
 	mounted() {
 		// Grid
