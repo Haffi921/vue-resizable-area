@@ -64,7 +64,6 @@ export default {
 		// Grid
 		grid: {
 			type: String,
-			default: '[200, 200]',
 			validator(value) {
 				return value.match(/\[\d+, \d+]/);
 			},
