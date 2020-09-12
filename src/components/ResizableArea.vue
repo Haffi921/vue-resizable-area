@@ -64,6 +64,13 @@ export default {
 				return value.match(/\[\d+, \d+]/);
 			},
 		},
+		gridBuf: {
+			type: Number,
+			default: 0.5,
+			validator(value) {
+				return value >= 0 && value <= 1;
+			},
+		},
 	},
 	data: () => ({
 		// Div creators
@@ -94,12 +101,6 @@ export default {
 		// Grid
 		gridX: 1,
 		gridY: 1,
-		gridBuf: 0.6,
-
-		// Transition
-		// tSpeed: 1250, // px/s
-		// tStringX: '',
-		// tStringY: '',
 	}),
 	created() {
 		this.rect.width = this.initWidth;
