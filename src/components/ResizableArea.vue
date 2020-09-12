@@ -71,6 +71,21 @@ export default {
 				return value >= 0 && value <= 1;
 			},
 		},
+		transition: {
+			type: Boolean,
+			default: false,
+		},
+		tSpeed: {
+			type: Number,
+			default: 2000,
+			validator(value) {
+				return value > 0;
+			},
+		},
+		tFunction: {
+			type: String,
+			default: 'ease-in',
+		},
 	},
 	data: () => ({
 		// Div creators
@@ -112,18 +127,18 @@ export default {
 		this.cursorPadding = Math.floor(this.handleWidth / 2);
 	},
 	mounted() {
+		// Grid
+		if (this.grid) this.setUpGrid();
+
+		// Transition
+		if (this.transition) this.setUpTransition();
+
 		// Initial set up of area
 		this.updateDOM();
 		this.refreshParent();
 
 		// Update rects on window change
 		this.setWindowChangeListeners();
-
-		// Cursor padding is half the handle width
-		this.cursorPadding = Math.floor(this.handleWidth / 2);
-
-		// Grid
-		if (this.grid) this.setUpGrid();
 	},
 	methods: {
 		/* Refresh methods */
@@ -191,6 +206,49 @@ export default {
 		setWindowChangeListeners() {
 			window.addEventListener('scroll', this.refreshParent);
 			window.addEventListener('resize', this.onWindowResize);
+		},
+
+		/* Props */
+		// Grid methods
+		setUpGrid() {
+			// Calculate grid
+			[this.gridX, this.gridY] = this.grid.match(/\d+/g).map(Number);
+			this.gridBuf /= 2;
+
+			// If grid is bigger then minLengths, then minLength is mute
+			if (this.minWidth < this.gridX) this.minWidth = this.gridX;
+			if (this.minHeight < this.gridY) this.minHeight = this.gridY;
+
+			this.rect.width = this.applyGrid(this.rect.width, this.gridX);
+			this.rect.height = this.applyGrid(this.rect.height, this.gridY);
+		},
+		applyGrid(value, grid) {
+			return Math.round(value / grid) * grid;
+		},
+		applyGridBuf(newValue, currentValue, maxValue, grid, buf) {
+			if (newValue > currentValue
+				&& currentValue + grid > maxValue) {
+				return currentValue;
+			}
+
+			const gridBuf = grid * buf;
+			const valueBuf = newValue < currentValue
+				? newValue + gridBuf
+				: newValue - gridBuf;
+
+			return this.applyGrid(valueBuf, grid);
+		},
+		// Transition methods
+		setUpTransition() {
+			console.log(this.gridX / this.tSpeed);
+			const durationX = this.gridX / this.tSpeed;
+			const durationY = this.gridY / this.tSpeed;
+			const stringX = `${durationX}s ${this.tFunction}`;
+			const stringY = `${durationY}s ${this.tFunction}`;
+			const ruleX = `width ${stringX}, left ${stringX}`;
+			const ruleY = `height ${stringY}, top ${stringY}`;
+
+			this.$el.style.transition = `${ruleX}, ${ruleY}`;
 		},
 
 		/* Binding method */
@@ -300,41 +358,6 @@ export default {
 			// ...relative to the parent
 			- this.getParentY();
 		},
-
-		/* Grid methods */
-		setUpGrid() {
-			// Calculate grid
-			[this.gridX, this.gridY] = this.grid.match(/\d+/g).map(Number);
-			this.gridBuf /= 2;
-
-			// If grid is bigger then minLengths, then minLength is mute
-			if (this.minWidth < this.gridX) this.minWidth = this.gridX;
-			if (this.minHeight < this.gridY) this.minHeight = this.gridY;
-
-			// Transition string
-			// this.tSpeed = this.gridx / this.tSpeed;
-			// this.tStringX = `${this.tSpeed}s ease-in`;
-		},
-		applyGrid(value, grid) {
-			return Math.round(value / grid) * grid;
-		},
-		applyGridBuf(newValue, currentValue, maxValue, grid, buf) {
-			if (newValue > currentValue
-				&& currentValue + grid > maxValue) {
-				return currentValue;
-			}
-
-			const gridBuf = grid * buf;
-			const valueBuf = newValue < currentValue
-				? newValue + gridBuf
-				: newValue - gridBuf;
-
-			return this.applyGrid(valueBuf, grid);
-		},
-		// Transition
-		// removeTransition() {
-		// 	this.$el.style.removeProperty('transition');
-		// },
 
 		/* Move methods */
 		// General moves
