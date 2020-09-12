@@ -200,7 +200,7 @@ export default {
 			}
 		},
 		reloadWH_grid(xy) {
-			const position = this.xyConditional(xy, 'left', 'right');
+			const position = this.xyConditional(xy, 'left', 'top');
 			const dimension = this.xyConditional(xy, 'width', 'height');
 			const grid = this[`grid${upper(xy)}`];
 			this.rect[position] = Math.floor(this.rect[position] / grid) * grid;
