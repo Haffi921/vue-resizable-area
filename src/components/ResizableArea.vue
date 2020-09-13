@@ -3,12 +3,12 @@
 		<!-- Side handles -->
 		<ResizeHandle class="side"
 			v-for="side in sides" :key="side"
-			:type="side" :moveFunction="getMove(side + 'Move')"
+			:type="side" :move-function="getMove(side + 'Move')"
 			:width="handleWidth" />
 		<!-- Corner handles -->
 		<ResizeHandle class="corner" :corner="true"
 			v-for="(type, corner) in corners" :key="corner"
-			:type="type" :moveFunction="getMove(corner + 'Move')"
+			:type="type" :move-function="getMove(corner + 'Move')"
 			:width="handleWidth" />
 		left: {{ this.rect.left }}<br>
 		top: {{ this.rect.top }}<br>
@@ -63,9 +63,10 @@ export default {
 
 		// Grid
 		grid: {
-			type: String,
+			type: Array,
+			// default: () => ([200, 200]),
 			validator(value) {
-				return value.match(/\[\d+, \d+]/);
+				return value.length === 2 && value.every((xy) => xy > 0);
 			},
 		},
 		gridBuf: {
@@ -143,6 +144,9 @@ export default {
 		this.maxH = this.maxHeight;
 	},
 	mounted() {
+		// Get parent
+		this.refreshParent();
+
 		// Grid
 		if (this.grid) this.setUpGrid();
 
@@ -151,13 +155,13 @@ export default {
 
 		// Initial set up of area
 		this.updateDOM();
-		this.refreshParent();
 
 		// Update rects on window change
 		this.setWindowChangeListeners();
 	},
 	methods: {
-		/* Refresh methods */
+		/* --- Refresh methods ---*/
+		// Rects
 		updateDOM() {
 			this.$el.style.width = `${this.rect.width}px`;
 			this.$el.style.height = `${this.rect.height}px`;
@@ -179,6 +183,8 @@ export default {
 				left: parentPadding[3 % parentPadding.length],
 			};
 		},
+
+		// Reload rects
 		reloadRect(xy) {
 			this.reloadWH(xy);
 			this.reloadLT(xy);
@@ -205,6 +211,7 @@ export default {
 			this.rect[position] = this.applyGridFloor(this.rect[position], grid);
 			this.rect[dimension] = this.applyGridFloor(this.rect[dimension], grid);
 		},
+
 		// Event listener methods
 		onWindowResize() {
 			this.refreshParent();
@@ -228,7 +235,7 @@ export default {
 		// Grid methods
 		setUpGrid() {
 			// Calculate grid
-			[this.gridX, this.gridY] = this.grid.match(/\d+/g).map(Number);
+			[this.gridX, this.gridY] = this.grid;
 			this.gridB = this.gridBuf / 2;
 
 			// If grid is bigger then minLengths, then minLength is mute
@@ -266,6 +273,7 @@ export default {
 
 			return this.applyGrid(valueBuf, grid);
 		},
+
 		// Transition methods
 		setUpTransition() {
 			const durationX = this.gridX / this.tSpeed;
@@ -278,12 +286,12 @@ export default {
 			this.$el.style.transition = `${ruleX}, ${ruleY}`;
 		},
 
-		/* Binding method */
+		/* --- Binding method ---*/
 		getMove(moveName) {
 			return this[moveName];
 		},
 
-		/* Util methods */
+		/* --- Util methods ---*/
 		xyConditional(xy, x, y) {
 			if (xy === 'x') {
 				try {
@@ -306,10 +314,30 @@ export default {
 			throw TypeError(`xy is ${xy} but it should be either 'x' or 'y'`);
 		},
 
-		/* Getters */
-		// Get self methods
+		/* --- Getters and setters ---*/
+		// Width and Height
+		getWidthOrHeight(xy) {
+			return this.xyConditional(xy, this.rect.width, this.rect.height);
+		},
+		getWidth() {
+			return this.rect.width;
+		},
+		getHeight() {
+			return this.rect.height;
+		},
+		setWidthOrHeight(xy, wh) {
+			this.xyConditional(xy, this.setWidth.bind(this, wh), this.setHeight.bind(this, wh));
+		},
+		setWidth(width) {
+			this.rect.width = width;
+		},
+		setHeight(height) {
+			this.rect.height = height;
+		},
+
+		// MinWidth or MinHeight
 		getMinWidthOrHeight(xy) {
-			return this.xyConditional(xy, this.getMinWidth, this.getMinHeight);
+			return this.xyConditional(xy, this.minW, this.minH);
 		},
 		getMinWidth() {
 			return this.minW;
@@ -317,34 +345,81 @@ export default {
 		getMinHeight() {
 			return this.minH;
 		},
+		setMinWidthOrHeight(xy, wh) {
+			this.xyConditional(xy,
+				this.setMinWidth.bind(this, wh),
+				this.setMinHeight.bind(this, wh));
+		},
+		setMinWidth(width) {
+			this.minW = width;
+		},
+		setMinHeight(height) {
+			this.minH = height;
+		},
+
+		// MaxWidth or MaxHeight
 		getMaxWidthOrHeight(xy) {
 			return this.xyConditional(xy, this.getMaxWidth, this.getMaxHeight);
 		},
+		// TODO: Make maxwidth/height actually follow maxW/H with option to restrict to parent
 		getMaxWidth() {
-			return this.getParentW() - this.getLeftX();
+			return this.getParentW() - this.getLeft();
 		},
 		getMaxHeight() {
-			return this.getParentH() - this.getTopY();
+			return this.getParentH() - this.getTop();
 		},
-		// Get rect methods
+		setMaxWidthOrHeight(xy, wh) {
+			this.xyConditional(xy,
+				this.setMaxWidth.bind(this, wh),
+				this.setMaxHeight.bind(this, wh));
+		},
+		setMaxWidth(width) {
+			this.maxW = width;
+		},
+		setMaxHeight(height) {
+			this.maxH = height;
+		},
+
+		// Left/Top
 		getLeftOrTop(xy) {
-			return this.xyConditional(xy, this.getLeftX, this.getTopY);
+			return this.xyConditional(xy, this.getLeft, this.getTop);
 		},
+		getLeft() {
+			return this.rect.left;
+		},
+		getTop() {
+			return this.rect.top;
+		},
+		setLeftOrTop(xy, lt) {
+			this.xyConditional(xy, this.setLeft.bind(this, lt), this.setTop.bind(this, lt));
+		},
+		setLeft(left) {
+			this.rect.left = left;
+		},
+		setTop(top) {
+			this.rect.top = top;
+		},
+
+		// Right/Bottom
 		getRightOrBottom(xy) {
-			return this.xyConditional(xy, this.getRightX, this.getBottomY);
+			return this.xyConditional(xy, this.getRight, this.getBottom);
 		},
-		getLeftX() {
-			return this.rect.left;// - this.getParentX();
+		getRight() {
+			return this.rect.right;
 		},
-		getTopY() {
-			return this.rect.top;// - this.getParentY();
+		getBottom() {
+			return this.rect.bottom;
 		},
-		getRightX() {
-			return this.rect.right;// - this.getParentX();
+		setRightOrBottom(xy, rb) {
+			this.xyConditional(xy, this.setRight.bind(this, rb), this.setBottom.bind(this, rb));
 		},
-		getBottomY() {
-			return this.rect.bottom;// - this.getParentY();
+		setRight(right) {
+			this.rect.right = right;
 		},
+		setBottom(bottom) {
+			this.rect.bottom = bottom;
+		},
+
 		// Get parent methods
 		getParentWH(xy) {
 			return this.xyConditional(xy, this.getParentW, this.getParentH);
@@ -365,6 +440,7 @@ export default {
 			const totalYPadding = top + bottom;
 			return this.parentRect.height - totalYPadding;
 		},
+
 		// Get cursor methods
 		getRelativeCursor(xy, e) {
 			return this.xyConditional(
@@ -386,7 +462,31 @@ export default {
 			- this.getParentY();
 		},
 
-		/* Move methods */
+		// Cursor offset
+		getOffset(xy) {
+			return this.xyConditional(xy, this.offsetX, this.offsetY);
+		},
+		setOffset(e) {
+			this.offsetX = this.getCursorX(e) - this.getLeft();
+			this.offsetY = this.getCursorY(e) - this.getTop();
+		},
+		setOffsetX(e) {
+			this.offsetX = this.getCursorX(e) - this.getLeft();
+		},
+		setOffsetY(e) {
+			this.offsetY = this.getCursorY(e) - this.getTop();
+		},
+		unsetOffset() {
+			this.offsetX = 0;
+			this.offsetY = 0;
+		},
+
+		// Grid
+		getGrid(xy) {
+			return this.xyConditional(xy, this.gridX, this.gridY);
+		},
+
+		/* --- Move methods ---*/
 		// General moves
 		dimensionMove(xy, e) {
 			// Get position and dimension name
@@ -476,6 +576,7 @@ export default {
 			/* Refresh */
 			this.updateDOM();
 		},
+
 		// Corners
 		topLeftMove(e) {
 			/* Apply changes */
