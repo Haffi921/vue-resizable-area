@@ -21,7 +21,6 @@
 
 <script>
 import clamp from 'lodash/clamp';
-import upper from 'lodash/upperCase';
 import ResizeHandle from './ResizeHandle.vue';
 
 export default {
@@ -190,69 +189,76 @@ export default {
 			this.reloadLT(xy);
 		},
 		reloadWH(xy) {
-			const dimension = this.xyConditional(xy, 'width', 'height');
 			const min = this.getMinWidthOrHeight(xy);
 			const max = this.getMaxWidthOrHeight(xy);
-			const wh = this.rect[dimension];
-			this.rect[dimension] = clamp(wh, min, max);
+			const wh = this.getWidthOrHeight(xy);
+			this.setWidthOrHeight(xy, clamp(wh, min, max));
 		},
 		reloadLT(xy) {
-			const dimension = this.xyConditional(xy, 'left', 'top');
 			const min = this.getMinWidthOrHeight(xy);
-			const parentWH = this.getParentWH(xy);
-			if (this.rect[dimension] > parentWH - min) {
-				this.rect[dimension] = parentWH - min;
-			}
+			const max = this.getParentWH(xy) - min;
+			const lt = clamp(this.getLeftOrTop(xy), 0, max);
+			this.setLeftOrTop(xy, lt);
 		},
 		reloadWH_grid(xy) {
-			const position = this.xyConditional(xy, 'left', 'top');
-			const dimension = this.xyConditional(xy, 'width', 'height');
-			const grid = this[`grid${upper(xy)}`];
-			this.rect[position] = this.applyGridFloor(this.rect[position], grid);
-			this.rect[dimension] = this.applyGridFloor(this.rect[dimension], grid);
+			const grid = this.getGrid(xy);
+			let wh = this.applyGridFloor(this.getWidthOrHeight(xy), grid);
+			let lt = this.applyGridFloor(this.getLeftOrTop(xy), grid);
+			wh = wh > grid ? wh : grid;
+			lt = lt > 0 ? lt : 0;
+
+			this.setWidthOrHeight(xy, wh);
+			this.setLeftOrTop(xy, lt);
 		},
 
 		// Event listener methods
 		onWindowResize() {
 			this.refreshParent();
 
-			this.reloadRect('x');
-			this.reloadRect('y');
+			let changed = false;
 
-			if (this.grid) {
-				this.reloadWH_grid('x');
-				this.reloadWH_grid('y');
+			['x', 'y'].forEach((xy) => {
+				if (this.getParentWH(xy) < this.getLeftOrTop(xy) + this.getWidthOrHeight(xy)) {
+					changed = true;
+					this.reloadRect(xy);
+					if (this.grid) {
+						this.reloadWH_grid(xy);
+					}
+				}
+			});
+
+			if (changed) {
+				this.updateDOM();
 			}
-
-			this.updateDOM();
 		},
 		setWindowChangeListeners() {
 			window.addEventListener('scroll', this.refreshParent);
 			window.addEventListener('resize', this.onWindowResize);
 		},
 
-		/* Props */
+		/* --- Props ---*/
 		// Grid methods
 		setUpGrid() {
 			// Calculate grid
 			[this.gridX, this.gridY] = this.grid;
 			this.gridB = this.gridBuf / 2;
 
-			// If grid is bigger then minLengths, then minLength is mute
-			if (this.minW < this.gridX) this.minW = this.gridX;
-			if (this.minH < this.gridY) this.minH = this.gridY;
+			['x', 'y'].forEach((xy) => {
+				const grid = this.getGrid(xy);
+				let wh = this.getWidthOrHeight(xy);
 
-			// Floor rect to next grid level
-			let width = this.applyGridFloor(this.rect.width, this.gridX);
-			let height = this.applyGridFloor(this.rect.height, this.gridY);
+				// If grid is bigger then minLengths, then minLength is mute
+				if (this.getMinWidthOrHeight(xy) < grid) this.setMinWidthOrHeight(xy, grid);
 
-			// If rect has been floored to 0, rectify
-			if (width <= 0) width = this.gridX;
-			if (height <= 0) height = this.gridY;
+				// Floor rect to next grid level
+				wh = this.applyGridFloor(wh, grid);
 
-			// Set rect to grid
-			this.rect.width = width;
-			this.rect.height = height;
+				// If rect has been floored to 0, rectify
+				const max = this.applyGridFloor(this.getMaxWidthOrHeight(xy), grid);
+				wh = clamp(wh, this.getMinWidthOrHeight(xy), max);
+
+				this.setWidthOrHeight(xy, wh);
+			});
 		},
 		applyGrid(value, grid) {
 			return Math.round(value / grid) * grid;
@@ -442,20 +448,20 @@ export default {
 		},
 
 		// Get cursor methods
-		getRelativeCursor(xy, e) {
+		getCursor(xy, e) {
 			return this.xyConditional(
 				xy,
-				this.getRelativeCursorX.bind(this, e),
-				this.getRelativeCursorY.bind(this, e),
+				this.getCursorX.bind(this, e),
+				this.getCursorY.bind(this, e),
 			);
 		},
-		getRelativeCursorX(e) {
+		getCursorX(e) {
 			// Get cursor x-position
 			return e.clientX
 				// ...relative to the parent
 				- this.getParentX();
 		},
-		getRelativeCursorY(e) {
+		getCursorY(e) {
 			// Get cursor y-position
 			return e.clientY
 			// ...relative to the parent
@@ -489,126 +495,152 @@ export default {
 		/* --- Move methods ---*/
 		// General moves
 		dimensionMove(xy, e) {
-			// Get position and dimension name
-			const dimension = this.xyConditional(xy, 'width', 'height');
-			// Get left or top side XY position
+			// Get current left or top side XY position
 			const lt = this.getLeftOrTop(xy);
-			// Get min/max
-			const min = this.getMinWidthOrHeight(xy);
-			const max = this.getMaxWidthOrHeight(xy);
-
-			// Get cursor x or y-position
-			let wh = this.getRelativeCursor(xy, e)
-				// ...relative to left or top-side
-				- lt
+			// Get proposed new right/bottom
+			let rb = this.getCursor(xy, e)
 				// Small padding
 				+ this.cursorPadding;
 
 			// Clamp wh between min and max values
-			wh = clamp(wh, min, max);
+			const min = lt + this.getMinWidthOrHeight(xy);
+			const max = this.getParentWH(xy);
+			rb = clamp(rb, min, max);
 
 			// Apply grid
 			if (this.grid) {
-				const grid = `grid${upper(xy)}`;
-				wh = this.applyGridBuf(
-					wh, this.rect[dimension], this.getMaxWidthOrHeight(xy),
-					this[grid], this.gridB,
-				);
+				const grid = this.getGrid(xy);
+				rb = this.applyGridBuf(rb, this.getRightOrBottom(xy), max, grid, this.gridB);
 			}
 
-			this.rect[dimension] = wh;
+			// Return new width/height
+			return rb - lt;
 		},
 		positionDimensionMove(xy, e) {
-			// Get position and dimension name
-			const position = this.xyConditional(xy, 'left', 'top');
-			const dimension = this.xyConditional(xy, 'width', 'height');
 			// Get right or bottom side XY position
 			const rb = this.getRightOrBottom(xy);
-			// Get min/max
-			const min = 0;
-			const max = rb - this.getMinWidthOrHeight(xy);
-
-			// Get cursor x or y-position relative to parent
-			let lt = this.getRelativeCursor(xy, e)
+			// Get proposed x or y-position
+			let lt = this.getCursor(xy, e)
 				// Small cursor padding
 				- this.cursorPadding;
 
 			// Clamp leftX between min and max
+			const min = 0;
+			const max = rb - this.getMinWidthOrHeight(xy);
 			lt = clamp(lt, min, max);
 
 			if (this.grid) {
-				const grid = `grid${upper(xy)}`;
-				lt = this.applyGridBuf(
-					lt, this.rect[position], this.getParentWH(xy),
-					this[grid], this.gridB,
-				);
+				const grid = this.getGrid(xy);
+				lt = this.applyGridBuf(lt, this.getLeftOrTop(xy), max, grid, this.gridB);
 			}
 
-			this.rect[position] = lt;
-			this.rect[dimension] = rb - lt;
+			// Return new left/top and width/height
+			return [lt, rb - lt];
 		},
 		// Sides
 		leftMove(e) {
-			/* Apply changes */
-			this.positionDimensionMove('x', e); // Left
+			const [left, width] = this.positionDimensionMove('x', e);
 
-			/* Refresh */
-			this.updateDOM();
+			if (this.rect.left !== left) {
+				/* Apply changes */
+				this.setLeft(left);
+				this.setWidth(width);
+
+				/* Refresh */
+				this.updateDOM();
+			}
 		},
 		topMove(e) {
-			/* Apply changes */
-			this.positionDimensionMove('y', e); // Top
+			const [top, height] = this.positionDimensionMove('y', e);
 
-			/* Refresh */
-			this.updateDOM();
+			if (this.rect.top !== top) {
+				/* Apply changes */
+				this.setTop(top);
+				this.setHeight(height);
+
+				/* Refresh */
+				this.updateDOM();
+			}
 		},
 		rightMove(e) {
-			/* Apply changes */
-			this.dimensionMove('x', e); // Right
+			const width = this.dimensionMove('x', e);
 
-			/* Refresh */
-			this.updateDOM();
+			if (this.rect.width !== width) {
+				/* Apply changes */
+				this.setWidth(width);
+
+				/* Refresh */
+				this.updateDOM();
+			}
 		},
 		bottomMove(e) {
-			/* Apply changes */
-			this.dimensionMove('y', e); // Bottom
+			const height = this.dimensionMove('y', e); // Height
 
-			/* Refresh */
-			this.updateDOM();
+			if (this.rect.height !== height) {
+				/* Apply changes */
+				this.setHeight(height);
+
+				/* Refresh */
+				this.updateDOM();
+			}
 		},
 
 		// Corners
 		topLeftMove(e) {
-			/* Apply changes */
-			this.positionDimensionMove('y', e); // Top
-			this.positionDimensionMove('x', e); // Left
+			const [left, width] = this.positionDimensionMove('x', e);
+			const [top, height] = this.positionDimensionMove('y', e);
 
-			/* Refresh */
-			this.updateDOM();
+			if (this.rect.left !== left || this.rect.top !== top) {
+				/* Apply changes */
+				this.setLeft(left);
+				this.setWidth(width);
+				this.setTop(top);
+				this.setHeight(height);
+
+				/* Refresh */
+				this.updateDOM();
+			}
 		},
 		topRightMove(e) {
-			/* Apply changes */
-			this.positionDimensionMove('y', e); // Top
-			this.dimensionMove('x', e); // Right
+			const width = this.dimensionMove('x', e);
+			const [top, height] = this.positionDimensionMove('y', e);
 
-			/* Refresh */
-			this.updateDOM();
+			if (this.rect.width !== width || this.rect.top !== top) {
+				/* Apply changes */
+				this.setWidth(width);
+				this.setTop(top);
+				this.setHeight(height);
+
+				/* Refresh */
+				this.updateDOM();
+			}
 		},
 		bottomRightMove(e) {
-			/* Apply changes */
-			this.dimensionMove('y', e); // Bottom
-			this.dimensionMove('x', e); // Right
+			const width = this.dimensionMove('x', e);
+			const height = this.dimensionMove('y', e);
 
-			/* Refresh */
-			this.updateDOM();
+			if (this.rect.width !== width || this.rect.height !== height) {
+				/* Apply changes */
+				this.setWidth(width);
+				this.setHeight(height);
+
+				/* Refresh */
+				this.updateDOM();
+			}
 		},
 		bottomLeftMove(e) {
-			/* Apply changes */
-			this.dimensionMove('y', e); // Bottom
-			this.positionDimensionMove('x', e); // Left
+			const [left, width] = this.positionDimensionMove('x', e);
+			const height = this.dimensionMove('y', e);
 
-			/* Refresh */
-			this.updateDOM();
+			if (this.rect.left !== left || this.rect.height !== height) {
+				/* Apply changes */
+				this.setLeft(left);
+				this.setWidth(width);
+				this.setHeight(height);
+
+				/* Refresh */
+				this.updateDOM();
+			}
 		},
 	},
 };
