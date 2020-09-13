@@ -65,6 +65,18 @@ export default {
 			type: Number,
 			default: Infinity,
 		},
+		restrictToParent: {
+			type: Boolean || Array[Boolean],
+			default: true,
+			validator(value) {
+				const booleanCheck = (bool) => (typeof bool === 'boolean');
+				const arrayCheck = (arr) => Array.isArray(arr)
+						&& arr.length === 2
+						&& arr.every(booleanCheck);
+
+				return booleanCheck(value) || arrayCheck(value);
+			},
+		},
 
 		// Grid
 		grid: {
@@ -191,6 +203,14 @@ export default {
 				bottom: parentPadding[2 % parentPadding.length],
 				left: parentPadding[3 % parentPadding.length],
 			};
+
+			// If padding is 'padding: {top} {left/right} {bottom};'
+			// if (parentPadding.length === 3) this.parentRect.padding.left = parentPadding[1];
+
+			if (this.restrictToParent) {
+				this.setMaxWidth(this.getParentW());
+				this.setMaxHeight(this.getParentH());
+			}
 		},
 
 		// Reload rects
@@ -228,7 +248,7 @@ export default {
 			let changed = false;
 
 			['x', 'y'].forEach((xy) => {
-				if (this.getParentWH(xy) < this.getLeftOrTop(xy) + this.getWidthOrHeight(xy)) {
+				if (this.getWidthOrHeight(xy) > this.getMaxWidthOrHeight(xy)) {
 					changed = true;
 					this.reloadRect(xy);
 					if (this.grid) {
@@ -377,12 +397,11 @@ export default {
 		getMaxWidthOrHeight(xy) {
 			return this.xyConditional(xy, this.getMaxWidth, this.getMaxHeight);
 		},
-		// TODO: Make maxwidth/height actually follow maxW/H with option to restrict to parent
 		getMaxWidth() {
-			return this.getParentW() - this.getLeft();
+			return this.maxW - this.getLeft();
 		},
 		getMaxHeight() {
-			return this.getParentH() - this.getTop();
+			return this.maxH - this.getTop();
 		},
 		setMaxWidthOrHeight(xy, wh) {
 			this.xyConditional(xy,
