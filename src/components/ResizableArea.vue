@@ -1,5 +1,11 @@
 <template>
 	<div class="area">
+		<ResizeHandle class="drag-bar"
+			type="bar"
+			:down-function="setOffset"
+			:move-function="freeMove"
+			:up-function="unsetOffset"
+			:width="30" />
 		<!-- Side handles -->
 		<ResizeHandle class="side"
 			v-for="side in sides" :key="side"
@@ -118,6 +124,10 @@ export default {
 
 		// Paddings for cursor on handle
 		cursorPadding: 0,
+
+		// Offset XY Cords for free drag
+		offsetX: 0,
+		offsetY: 0,
 
 		// Width and Height
 		minW: 0,
@@ -516,6 +526,23 @@ export default {
 			// Return new width/height
 			return rb - lt;
 		},
+		positionMove(xy, e) {
+			// Get proposed new left/right
+			let lt = this.getCursor(xy, e) - this.getOffset(xy);
+
+			// Clamp cursor between min and max
+			const min = 0;
+			const max = this.getParentWH(xy) - this.getWidthOrHeight(xy);
+			lt = clamp(lt, min, max);
+
+			if (this.grid) {
+				const grid = this.getGrid(xy);
+				lt = this.applyGridBuf(lt, this.getLeftOrTop(xy), max, grid, this.gridB);
+			}
+
+			// Return new left/top
+			return lt;
+		},
 		positionDimensionMove(xy, e) {
 			// Get right or bottom side XY position
 			const rb = this.getRightOrBottom(xy);
@@ -537,6 +564,22 @@ export default {
 			// Return new left/top and width/height
 			return [lt, rb - lt];
 		},
+
+		// Drag bar
+		freeMove(e) {
+			const left = this.positionMove('x', e);
+			const top = this.positionMove('y', e);
+
+			if (this.rect.left !== left || this.rect.top !== top) {
+				/* Apply changes */
+				this.setLeft(left);
+				this.setTop(top);
+
+				/* Refresh */
+				this.updateDOM();
+			}
+		},
+
 		// Sides
 		leftMove(e) {
 			const [left, width] = this.positionDimensionMove('x', e);

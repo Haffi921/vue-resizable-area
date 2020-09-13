@@ -11,9 +11,15 @@
 
 <script>
 const props = {
+	downFunction: {
+		type: Function,
+	},
 	moveFunction: {
 		type: Function,
 		required: true,
+	},
+	upFunction: {
+		type: Function,
 	},
 	width: {
 		type: Number,
@@ -31,6 +37,7 @@ const props = {
 				'left', 'top', 'right', 'bottom',
 				'top-left', 'top-right',
 				'bottom-right', 'bottom-left',
+				'bar',
 			].includes(value);
 		},
 	},
@@ -51,13 +58,15 @@ export default {
 		this.$el.addEventListener('mousedown', this.onDown);
 	},
 	methods: {
-		onDown() {
+		onDown(e) {
 			window.addEventListener('mousemove', this.moveFunction);
 			window.addEventListener('mouseup', this.onUp);
+			if (this.downFunction) this.downFunction(e);
 		},
-		onUp() {
+		onUp(e) {
 			window.removeEventListener('mousemove', this.moveFunction);
 			window.removeEventListener('mouseup', this.onUp);
+			if (this.upFunction) this.upFunction(e);
 		},
 	},
 };
@@ -67,6 +76,14 @@ export default {
 .handle {
 	position: absolute;
 	box-sizing: border-box;
+}
+
+/* Bar */
+.handle-bar {
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: var(--width);
 }
 
 /* Top-left */
@@ -101,19 +118,15 @@ export default {
 .handle-top,
 .handle-bottom {
 	width: 100%;
-	cursor: row-resize;
-}
-
-.handle-top,
-.handle-bottom {
 	height: var(--width);
+	cursor: row-resize;
 }
 
 /* Vertical side handles */
 .handle-left,
 .handle-right {
-	height: 100%;
 	width: var(--width);
+	height: 100%;
 	cursor: col-resize;
 }
 
