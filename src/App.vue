@@ -21,7 +21,6 @@ body {
     margin: 0;
     background: darkgray;
     box-sizing: border-box;
-    z-index: 1000;
 }
 
 #app {
