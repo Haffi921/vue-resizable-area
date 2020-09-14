@@ -37,6 +37,7 @@ import ParentRectMixin from '@/components/mixins/ParentRectMixin';
 import GridMixin from '@/components/mixins/GridMixin';
 import TransitionMixin from '@/components/mixins/TransitionMixin';
 import CursorPositionMixin from '@/components/mixins/CursorPositionMixin';
+import WindowChangeMixin from '@/components/mixins/WindowChangeMixin';
 
 const RectPropsMixin = {
 	props: {
@@ -115,6 +116,7 @@ export default {
 		GridMixin,
 		TransitionMixin,
 		CursorPositionMixin,
+		WindowChangeMixin,
 	],
 	props: {
 		// Width of drag handles
@@ -200,9 +202,6 @@ export default {
 
 		// Initial set up of area
 		this.updateDOM();
-
-		// Update rects on window change
-		this.setWindowChangeListeners();
 	},
 	methods: {
 		/* --- Refresh methods ---*/
@@ -222,63 +221,9 @@ export default {
 			this.setRight(left + width);
 			this.setBottom(top + height);
 		},
-
-		// Reload rects
-		reloadRect(xy) {
-			this.reloadWH(xy);
-			this.reloadLT(xy);
-		},
-		reloadWH(xy) {
-			const min = this.getMinWidthOrHeight(xy);
-			const max = this.getMaxWidthOrHeight(xy);
-			const wh = this.getWidthOrHeight(xy);
-			this.setWidthOrHeight(xy, clamp(wh, min, max));
-		},
-		reloadLT(xy) {
-			const min = this.getMinWidthOrHeight(xy);
-			const max = this.getParentWH(xy) - min;
-			const lt = clamp(this.getLeftOrTop(xy), 0, max);
-			this.setLeftOrTop(xy, lt);
-		},
-		reloadWH_grid(xy) {
-			const grid = this.getGrid(xy);
-			let wh = this.applyGridFloor(this.getWidthOrHeight(xy), grid);
-			let lt = this.applyGridFloor(this.getLeftOrTop(xy), grid);
-			wh = wh > grid ? wh : grid;
-			lt = lt > 0 ? lt : 0;
-
-			this.setWidthOrHeight(xy, wh);
-			this.setLeftOrTop(xy, lt);
-		},
-
 		getRemainingWidth() {
 			this.getMaxRight();
 			// const a = this. - this.getLeft()
-		},
-
-		// Event listener methods
-		onWindowResize() {
-			this.refreshParent();
-
-			let changed = false;
-
-			['x', 'y'].forEach((xy) => {
-				if (this.getWidthOrHeight(xy) > this.getMaxWidthOrHeight(xy)) {
-					changed = true;
-					this.reloadRect(xy);
-					if (this.grid) {
-						this.reloadWH_grid(xy);
-					}
-				}
-			});
-
-			if (changed) {
-				this.updateDOM();
-			}
-		},
-		setWindowChangeListeners() {
-			window.addEventListener('scroll', this.refreshParent);
-			window.addEventListener('resize', this.onWindowResize);
 		},
 
 		/* --- Util methods ---*/
