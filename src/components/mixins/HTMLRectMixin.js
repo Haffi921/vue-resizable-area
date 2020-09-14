@@ -29,10 +29,10 @@ function xyMixin(x, y, prefix) {
 		[camel(['set', pref, y])](newY) {
 			this[camel([pref, y])] = newY;
 		},
-		[camel(['set', pref, x, 'or', y])](xy, newX, newY) {
-			if (xy === 'x') this[camel([pref, x])] = newX;
-			if (xy === 'y') this[camel([pref, y])] = newY;
-			throw TypeError(`xy should be either 'x' or 'y', but it is: ${xy}`);
+		[camel(['set', pref, x, 'or', y])](xy, newXY) {
+			if (xy === 'x') this[camel([pref, x])] = newXY;
+			else if (xy === 'y') this[camel([pref, y])] = newXY;
+			else throw TypeError(`xy should be either 'x' or 'y', but it is: ${xy}`);
 		},
 	};
 
