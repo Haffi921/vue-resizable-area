@@ -16,32 +16,93 @@
 			v-for="(type, corner) in corners" :key="corner"
 			:type="type" :move-function="getMove(corner + 'Move')"
 			:width="handleWidth" />
-		left: {{ this.rect.left }}<br>
-		top: {{ this.rect.top }}<br>
-		right: {{ this.rect.right }}<br>
-		bottom: {{ this.rect.bottom }}<br>
-		width: {{ this.rect.width }}<br>
-		height: {{ this.rect.height }}<br>
+		left: {{ this.$data.left }}<br>
+		top: {{ this.$data.top }}<br>
+		right: {{ this.$data.right }}<br>
+		bottom: {{ this.$data.bottom }}<br>
+		width: {{ this.$data.width }}<br>
+		height: {{ this.$data.height }}<br>
 	</div>
 </template>
 
 <script>
-import clamp from 'lodash/clamp';
-import {
-	leftTop, leftTopMin,
-	RightBottom, RightBottomMax,
-	WidthHeight, WidthHeightMin, WidthHeightMax,
-} from './mixins/HTMLRectMixin';
+import { clamp, gte, gt } from 'lodash';
+import HTMLRectMixin from './mixins/HTMLRectMixin';
 import ResizeHandle from './ResizeHandle.vue';
+
+const RectPropsMixin = {
+	props: {
+		// Left and Top
+		L: {
+			type: Number,
+			default: 0,
+			validator: (value) => gte(value, 0),
+		},
+		T: {
+			type: Number,
+			default: 0,
+			validator: (value) => gte(value, 0),
+		},
+		minL: {
+			type: Number,
+			validator: (value) => gt(value, 0),
+		},
+		minT: {
+			type: Number,
+			validator: (value) => gt(value, 0),
+		},
+
+		// Right and Bottom
+		maxR: {
+			type: Number,
+			validator: (value) => gt(value, 0),
+		},
+		maxB: {
+			type: Number,
+			validator: (value) => gt(value, 0),
+		},
+
+		// Width and Height
+		W: {
+			type: Number,
+			default: 250,
+			validator: (value) => gt(value, 0),
+		},
+		H: {
+			type: Number,
+			default: 250,
+			validator: (value) => gt(value, 0),
+		},
+		minW: {
+			type: Number,
+			default: 35,
+			validator: (value) => gt(value, 0),
+		},
+		minH: {
+			type: Number,
+			default: 35,
+			validator: (value) => gt(value, 0),
+		},
+		maxW: {
+			type: Number,
+			default: Infinity,
+			validator: (value) => gt(value, 0),
+		},
+		maxH: {
+			type: Number,
+			default: Infinity,
+			validator: (value) => gt(value, 0),
+		},
+	},
+};
 
 export default {
 	components: {
 		ResizeHandle,
 	},
 	mixins: [
-		leftTop, LeftTopMin,
-		RightBottom, RightBottomMax,
-		WidthHeight, WidthHeightMin, WidthHeightMax,
+		RectPropsMixin,
+		HTMLRectMixin,
 	],
 	props: {
 		// Width of drag handles
@@ -50,31 +111,7 @@ export default {
 			default: 6,
 		},
 
-		// Width and Height
-		w: {
-			type: Number,
-			default: 250,
-		},
-		h: {
-			type: Number,
-			default: 250,
-		},
-		minW: {
-			type: Number,
-			default: 35,
-		},
-		minH: {
-			type: Number,
-			default: 35,
-		},
-		maxW: {
-			type: Number,
-			default: Infinity,
-		},
-		maxH: {
-			type: Number,
-			default: Infinity,
-		},
+		// Width / Height
 		restrictToParent: {
 			type: Boolean || Array[Boolean],
 			default: true,
@@ -131,18 +168,8 @@ export default {
 			bottomLeft: 'bottom-left',
 		},
 
-		/* Rects */
-		// Self
-		// rect: {
-		// 	left: 0,
-		// 	top: 0,
-		// 	right: 0,
-		// 	bottom: 0,
-		// 	width: 0,
-		// 	height: 0,
-		// },
-		// Parent
-		parentRect: {},
+		// Parent rect
+		parent: {},
 
 		// Paddings for cursor on handle
 		cursorPadding: 0,
@@ -150,12 +177,6 @@ export default {
 		// Offset XY Cords for free drag
 		offsetX: 0,
 		offsetY: 0,
-
-		// Width and Height
-		// minWidth: 0,
-		// minH: 0,
-		// maxW: 0,
-		// maxH: 0,
 
 		// Grid
 		gridX: 1,
@@ -174,19 +195,31 @@ export default {
 			} else {
 				restrict = this.restrictToParent;
 			}
-			this.maxRight = this.restrictToParent[0] ? this.getParentW() : Infinity;
-			this.maxBottom = this.restrictToParent[1] ? this.getParentH() : Infinity;
+			this.setMinLeft(restrict[0] ? 0 : -Infinity);
+			this.setMinTop(restrict[1] ? 0 : -Infinity);
+			// this.setMaxRight(restrict[0] ? this.getParentW() : Infinity);
+			// this.setMaxBottom(restrict[1] ? this.getParentH() : Infinity);
 		}
 
 		// Width and Height
-		// this.rect.width = this.initWidth;
-		this.setWidth(this.initWidth);
-		// this.rect.height = this.initHeight;
-		this.setHeight(this.initHeight);
+		this.setWidth(this.W);
+		this.setHeight(this.H);
+		// Width and Height min
 		this.setMinWidth(this.minW);
 		this.setMinHeight(this.minH);
+		// Width and Height max
 		this.setMaxWidth(this.maxW);
 		this.setMaxHeight(this.maxH);
+
+		// Left and Top
+		this.setLeft(this.L);
+		this.setTop(this.T);
+		// Left and Top min
+		this.setMinLeft(this.minL ? this.minL : this.getMinLeft());
+		this.setMinTop(this.minT ? this.minT : this.getMinTop());
+		// Right and Bottom max
+		this.setMaxRight(this.maxR ? this.maxR : this.getMaxRight());
+		this.setMaxBottom(this.maxB ? this.maxB : this.getMaxBottom());
 	},
 	mounted() {
 		// Get parent
@@ -208,28 +241,35 @@ export default {
 		/* --- Refresh methods ---*/
 		// Rects
 		updateDOM() {
-			this.$el.style.width = `${this.rect.width}px`;
-			this.$el.style.height = `${this.rect.height}px`;
-			this.$el.style.left = `${this.rect.left}px`;
-			this.$el.style.top = `${this.rect.top}px`;
-			this.rect.right = this.rect.left + this.rect.width;
-			this.rect.bottom = this.rect.top + this.rect.height;
+			const left = this.getLeft();
+			const top = this.getTop();
+			const width = this.getWidth();
+			const height = this.getHeight();
+
+			this.$el.style.width = `${width}px`;
+			this.$el.style.height = `${height}px`;
+			this.$el.style.left = `${left}px`;
+			this.$el.style.top = `${top}px`;
+
+			// Get new right and bottom
+			this.setRight(left + width);
+			this.setBottom(top + height);
 		},
 		refreshParent() {
-			const parentPadding = window.getComputedStyle(
+			const padding = window.getComputedStyle(
 				this.$el.parentNode,
 			).padding.match(/\d+/g).map((p) => parseInt(p, 10));
 
-			this.parentRect = this.$el.parentNode.getBoundingClientRect();
-			this.parentRect.padding = {
-				top: parentPadding[0 % parentPadding.length],
-				right: parentPadding[1 % parentPadding.length],
-				bottom: parentPadding[2 % parentPadding.length],
-				left: parentPadding[3 % parentPadding.length],
+			this.parent = this.$el.parentNode.getBoundingClientRect();
+			this.parent.padding = {
+				top: padding[0 % padding.length],
+				right: padding[1 % padding.length],
+				bottom: padding[2 % padding.length],
+				left: padding[3 % padding.length],
 			};
 
 			// If padding is 'padding: {top} {left/right} {bottom};'
-			// if (parentPadding.length === 3) this.parentRect.padding.left = parentPadding[1];
+			if (padding.length === 3) this.parent.padding.left = this.parent.padding.right;
 
 			if (this.restrictToParent) {
 				this.setMaxWidth(this.getParentW());
@@ -263,6 +303,11 @@ export default {
 
 			this.setWidthOrHeight(xy, wh);
 			this.setLeftOrTop(xy, lt);
+		},
+
+		getRemainingWidth() {
+			this.getMaxRight();
+			// const a = this. - this.getLeft()
 		},
 
 		// Event listener methods
@@ -346,12 +391,11 @@ export default {
 			this.$el.style.transition = `${ruleX}, ${ruleY}`;
 		},
 
-		/* --- Binding method ---*/
+		/* --- Util methods ---*/
 		getMove(moveName) {
 			return this[moveName];
 		},
 
-		/* --- Util methods ---*/
 		xyConditional(xy, x, y) {
 			if (xy === 'x') {
 				try {
@@ -374,130 +418,25 @@ export default {
 			throw TypeError(`xy is ${xy} but it should be either 'x' or 'y'`);
 		},
 
-		// /* --- Getters and setters ---*/
-		// // Width and Height
-		// getWidthOrHeight(xy) {
-		// 	return this.xyConditional(xy, this.rect.width, this.rect.height);
-		// },
-		// getWidth() {
-		// 	return this.rect.width;
-		// },
-		// getHeight() {
-		// 	return this.rect.height;
-		// },
-		// setWidthOrHeight(xy, wh) {
-		// 	this.xyConditional(xy, this.setWidth.bind(this, wh), this.setHeight.bind(this, wh));
-		// },
-		// setWidth(width) {
-		// 	this.rect.width = width;
-		// },
-		// setHeight(height) {
-		// 	this.rect.height = height;
-		// },
-		//
-		// // MinWidth or MinHeight
-		// getMinWidthOrHeight(xy) {
-		// 	return this.xyConditional(xy, this.minW, this.minH);
-		// },
-		// getMinWidth() {
-		// 	return this.minW;
-		// },
-		// getMinHeight() {
-		// 	return this.minH;
-		// },
-		// setMinWidthOrHeight(xy, wh) {
-		// 	this.xyConditional(xy,
-		// 		this.setMinWidth.bind(this, wh),
-		// 		this.setMinHeight.bind(this, wh));
-		// },
-		// setMinWidth(width) {
-		// 	this.minW = width;
-		// },
-		// setMinHeight(height) {
-		// 	this.minH = height;
-		// },
-		//
-		// // MaxWidth or MaxHeight
-		// getMaxWidthOrHeight(xy) {
-		// 	return this.xyConditional(xy, this.getMaxWidth, this.getMaxHeight);
-		// },
-		// getMaxWidth() {
-		// 	return this.maxW - this.getLeft();
-		// },
-		// getMaxHeight() {
-		// 	return this.maxH - this.getTop();
-		// },
-		// setMaxWidthOrHeight(xy, wh) {
-		// 	this.xyConditional(xy,
-		// 		this.setMaxWidth.bind(this, wh),
-		// 		this.setMaxHeight.bind(this, wh));
-		// },
-		// setMaxWidth(width) {
-		// 	this.maxW = width;
-		// },
-		// setMaxHeight(height) {
-		// 	this.maxH = height;
-		// },
-		//
-		// // Left/Top
-		// getLeftOrTop(xy) {
-		// 	return this.xyConditional(xy, this.getLeft, this.getTop);
-		// },
-		// getLeft() {
-		// 	return this.rect.left;
-		// },
-		// getTop() {
-		// 	return this.rect.top;
-		// },
-		// setLeftOrTop(xy, lt) {
-		// 	this.xyConditional(xy, this.setLeft.bind(this, lt), this.setTop.bind(this, lt));
-		// },
-		// setLeft(left) {
-		// 	this.rect.left = left;
-		// },
-		// setTop(top) {
-		// 	this.rect.top = top;
-		// },
-		//
-		// // Right/Bottom
-		// getRightOrBottom(xy) {
-		// 	return this.xyConditional(xy, this.getRight, this.getBottom);
-		// },
-		// getRight() {
-		// 	return this.rect.right;
-		// },
-		// getBottom() {
-		// 	return this.rect.bottom;
-		// },
-		// setRightOrBottom(xy, rb) {
-		// 	this.xyConditional(xy, this.setRight.bind(this, rb), this.setBottom.bind(this, rb));
-		// },
-		// setRight(right) {
-		// 	this.rect.right = right;
-		// },
-		// setBottom(bottom) {
-		// 	this.rect.bottom = bottom;
-		// },
-
 		// Get parent methods
 		getParentWH(xy) {
 			return this.xyConditional(xy, this.getParentW, this.getParentH);
 		},
 		getParentX() {
-			return this.parentRect.x + this.parentRect.padding.left;
+			return this.parent.x + this.parent.padding.left;
 		},
 		getParentY() {
-			return this.parentRect.y + this.parentRect.padding.top;
+			return this.parent.y + this.parent.padding.top;
 		},
 		getParentW() {
-			const { left, right } = this.parentRect.padding;
+			const { left, right } = this.parent.padding;
 			const totalXPadding = left + right;
-			return this.parentRect.width - totalXPadding;
+			return this.parent.width - totalXPadding;
 		},
 		getParentH() {
-			const { top, bottom } = this.parentRect.padding;
+			const { top, bottom } = this.parent.padding;
 			const totalYPadding = top + bottom;
-			return this.parentRect.height - totalYPadding;
+			return this.parent.height - totalYPadding;
 		},
 
 		// Get cursor methods
@@ -613,7 +552,7 @@ export default {
 			const left = this.positionMove('x', e);
 			const top = this.positionMove('y', e);
 
-			if (this.rect.left !== left || this.rect.top !== top) {
+			if (this.left !== left || this.top !== top) {
 				/* Apply changes */
 				this.setLeft(left);
 				this.setTop(top);
@@ -627,7 +566,7 @@ export default {
 		leftMove(e) {
 			const [left, width] = this.positionDimensionMove('x', e);
 
-			if (this.rect.left !== left) {
+			if (this.left !== left) {
 				/* Apply changes */
 				this.setLeft(left);
 				this.setWidth(width);
@@ -639,7 +578,7 @@ export default {
 		topMove(e) {
 			const [top, height] = this.positionDimensionMove('y', e);
 
-			if (this.rect.top !== top) {
+			if (this.top !== top) {
 				/* Apply changes */
 				this.setTop(top);
 				this.setHeight(height);
@@ -651,7 +590,7 @@ export default {
 		rightMove(e) {
 			const width = this.dimensionMove('x', e);
 
-			if (this.rect.width !== width) {
+			if (this.width !== width) {
 				/* Apply changes */
 				this.setWidth(width);
 
@@ -662,7 +601,7 @@ export default {
 		bottomMove(e) {
 			const height = this.dimensionMove('y', e); // Height
 
-			if (this.rect.height !== height) {
+			if (this.height !== height) {
 				/* Apply changes */
 				this.setHeight(height);
 
@@ -676,7 +615,7 @@ export default {
 			const [left, width] = this.positionDimensionMove('x', e);
 			const [top, height] = this.positionDimensionMove('y', e);
 
-			if (this.rect.left !== left || this.rect.top !== top) {
+			if (this.left !== left || this.top !== top) {
 				/* Apply changes */
 				this.setLeft(left);
 				this.setWidth(width);
@@ -691,7 +630,7 @@ export default {
 			const width = this.dimensionMove('x', e);
 			const [top, height] = this.positionDimensionMove('y', e);
 
-			if (this.rect.width !== width || this.rect.top !== top) {
+			if (this.width !== width || this.top !== top) {
 				/* Apply changes */
 				this.setWidth(width);
 				this.setTop(top);
@@ -705,7 +644,7 @@ export default {
 			const width = this.dimensionMove('x', e);
 			const height = this.dimensionMove('y', e);
 
-			if (this.rect.width !== width || this.rect.height !== height) {
+			if (this.width !== width || this.height !== height) {
 				/* Apply changes */
 				this.setWidth(width);
 				this.setHeight(height);
@@ -718,7 +657,7 @@ export default {
 			const [left, width] = this.positionDimensionMove('x', e);
 			const height = this.dimensionMove('y', e);
 
-			if (this.rect.left !== left || this.rect.height !== height) {
+			if (this.left !== left || this.height !== height) {
 				/* Apply changes */
 				this.setLeft(left);
 				this.setWidth(width);
