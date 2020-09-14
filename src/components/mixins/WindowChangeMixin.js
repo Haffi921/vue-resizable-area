@@ -1,7 +1,7 @@
 import { clamp } from 'lodash';
 import HTMLRectMixin from '@/components/mixins/HTMLRectMixin';
 import ParentRectMixin from '@/components/mixins/ParentRectMixin';
-import GridMixin from '@/components/mixins/propMixins/GridMixin';
+import GridMixin from '@/components/mixins/PropMixins/GridMixin';
 
 export default {
 	mixins: [HTMLRectMixin, ParentRectMixin, GridMixin],

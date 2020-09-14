@@ -26,7 +26,7 @@ import { clamp } from 'lodash';
 import ResizeHandle from '@/components/ResizeHandle.vue';
 
 /* Mixins */
-import UtilityMixin from '@/components/mixins/UtilityMixin';
+import UtilityMixin from '@/components/mixins/util/UtilityMixin';
 // Rects
 import HTMLRectMixin from '@/components/mixins/HTMLRectMixin';
 import ParentRectMixin from '@/components/mixins/ParentRectMixin';
@@ -34,8 +34,8 @@ import ParentRectMixin from '@/components/mixins/ParentRectMixin';
 import CursorPositionMixin from '@/components/mixins/CursorPositionMixin';
 import WindowChangeMixin from '@/components/mixins/WindowChangeMixin';
 // PropMixins
-import GridMixin from '@/components/mixins/propMixins/GridMixin';
-import TransitionMixin from '@/components/mixins/propMixins/TransitionMixin';
+import GridMixin from '@/components/mixins/PropMixins/GridMixin';
+import TransitionMixin from '@/components/mixins/PropMixins/TransitionMixin';
 /* ------ */
 
 export default {

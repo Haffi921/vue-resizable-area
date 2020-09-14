@@ -1,4 +1,4 @@
-import UtilityMixin from '@/components/mixins/UtilityMixin';
+import UtilityMixin from '@/components/mixins/util/UtilityMixin';
 import HTMLRectMixin from '@/components/mixins/HTMLRectMixin';
 
 export default {
