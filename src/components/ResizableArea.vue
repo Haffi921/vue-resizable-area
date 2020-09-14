@@ -27,12 +27,22 @@
 
 <script>
 import clamp from 'lodash/clamp';
+import {
+	leftTop, leftTopMin,
+	RightBottom, RightBottomMax,
+	WidthHeight, WidthHeightMin, WidthHeightMax,
+} from './mixins/HTMLRectMixin';
 import ResizeHandle from './ResizeHandle.vue';
 
 export default {
 	components: {
 		ResizeHandle,
 	},
+	mixins: [
+		leftTop, LeftTopMin,
+		RightBottom, RightBottomMax,
+		WidthHeight, WidthHeightMin, WidthHeightMax,
+	],
 	props: {
 		// Width of drag handles
 		handleWidth: {
@@ -41,27 +51,27 @@ export default {
 		},
 
 		// Width and Height
-		initWidth: {
+		w: {
 			type: Number,
 			default: 250,
 		},
-		initHeight: {
+		h: {
 			type: Number,
 			default: 250,
 		},
-		minWidth: {
+		minW: {
 			type: Number,
 			default: 35,
 		},
-		minHeight: {
+		minH: {
 			type: Number,
 			default: 35,
 		},
-		maxWidth: {
+		maxW: {
 			type: Number,
 			default: Infinity,
 		},
-		maxHeight: {
+		maxH: {
 			type: Number,
 			default: Infinity,
 		},
@@ -123,14 +133,14 @@ export default {
 
 		/* Rects */
 		// Self
-		rect: {
-			left: 0,
-			top: 0,
-			right: 0,
-			bottom: 0,
-			width: 0,
-			height: 0,
-		},
+		// rect: {
+		// 	left: 0,
+		// 	top: 0,
+		// 	right: 0,
+		// 	bottom: 0,
+		// 	width: 0,
+		// 	height: 0,
+		// },
 		// Parent
 		parentRect: {},
 
@@ -142,10 +152,10 @@ export default {
 		offsetY: 0,
 
 		// Width and Height
-		minW: 0,
-		minH: 0,
-		maxW: 0,
-		maxH: 0,
+		// minWidth: 0,
+		// minH: 0,
+		// maxW: 0,
+		// maxH: 0,
 
 		// Grid
 		gridX: 1,
@@ -156,13 +166,27 @@ export default {
 		// Cursor padding is half the handle width
 		this.cursorPadding = Math.floor(this.handleWidth / 2);
 
+		// Right or bottom
+		if (this.restrictToParent) {
+			let restrict = [];
+			if (typeof this.restrictToParent === 'boolean') {
+				restrict = [this.restrictToParent, this.restrictToParent];
+			} else {
+				restrict = this.restrictToParent;
+			}
+			this.maxRight = this.restrictToParent[0] ? this.getParentW() : Infinity;
+			this.maxBottom = this.restrictToParent[1] ? this.getParentH() : Infinity;
+		}
+
 		// Width and Height
-		this.rect.width = this.initWidth;
-		this.rect.height = this.initHeight;
-		this.minW = this.minWidth;
-		this.minH = this.minHeight;
-		this.maxW = this.maxWidth;
-		this.maxH = this.maxHeight;
+		// this.rect.width = this.initWidth;
+		this.setWidth(this.initWidth);
+		// this.rect.height = this.initHeight;
+		this.setHeight(this.initHeight);
+		this.setMinWidth(this.minW);
+		this.setMinHeight(this.minH);
+		this.setMaxWidth(this.maxW);
+		this.setMaxHeight(this.maxH);
 	},
 	mounted() {
 		// Get parent
@@ -350,110 +374,110 @@ export default {
 			throw TypeError(`xy is ${xy} but it should be either 'x' or 'y'`);
 		},
 
-		/* --- Getters and setters ---*/
-		// Width and Height
-		getWidthOrHeight(xy) {
-			return this.xyConditional(xy, this.rect.width, this.rect.height);
-		},
-		getWidth() {
-			return this.rect.width;
-		},
-		getHeight() {
-			return this.rect.height;
-		},
-		setWidthOrHeight(xy, wh) {
-			this.xyConditional(xy, this.setWidth.bind(this, wh), this.setHeight.bind(this, wh));
-		},
-		setWidth(width) {
-			this.rect.width = width;
-		},
-		setHeight(height) {
-			this.rect.height = height;
-		},
-
-		// MinWidth or MinHeight
-		getMinWidthOrHeight(xy) {
-			return this.xyConditional(xy, this.minW, this.minH);
-		},
-		getMinWidth() {
-			return this.minW;
-		},
-		getMinHeight() {
-			return this.minH;
-		},
-		setMinWidthOrHeight(xy, wh) {
-			this.xyConditional(xy,
-				this.setMinWidth.bind(this, wh),
-				this.setMinHeight.bind(this, wh));
-		},
-		setMinWidth(width) {
-			this.minW = width;
-		},
-		setMinHeight(height) {
-			this.minH = height;
-		},
-
-		// MaxWidth or MaxHeight
-		getMaxWidthOrHeight(xy) {
-			return this.xyConditional(xy, this.getMaxWidth, this.getMaxHeight);
-		},
-		getMaxWidth() {
-			return this.maxW - this.getLeft();
-		},
-		getMaxHeight() {
-			return this.maxH - this.getTop();
-		},
-		setMaxWidthOrHeight(xy, wh) {
-			this.xyConditional(xy,
-				this.setMaxWidth.bind(this, wh),
-				this.setMaxHeight.bind(this, wh));
-		},
-		setMaxWidth(width) {
-			this.maxW = width;
-		},
-		setMaxHeight(height) {
-			this.maxH = height;
-		},
-
-		// Left/Top
-		getLeftOrTop(xy) {
-			return this.xyConditional(xy, this.getLeft, this.getTop);
-		},
-		getLeft() {
-			return this.rect.left;
-		},
-		getTop() {
-			return this.rect.top;
-		},
-		setLeftOrTop(xy, lt) {
-			this.xyConditional(xy, this.setLeft.bind(this, lt), this.setTop.bind(this, lt));
-		},
-		setLeft(left) {
-			this.rect.left = left;
-		},
-		setTop(top) {
-			this.rect.top = top;
-		},
-
-		// Right/Bottom
-		getRightOrBottom(xy) {
-			return this.xyConditional(xy, this.getRight, this.getBottom);
-		},
-		getRight() {
-			return this.rect.right;
-		},
-		getBottom() {
-			return this.rect.bottom;
-		},
-		setRightOrBottom(xy, rb) {
-			this.xyConditional(xy, this.setRight.bind(this, rb), this.setBottom.bind(this, rb));
-		},
-		setRight(right) {
-			this.rect.right = right;
-		},
-		setBottom(bottom) {
-			this.rect.bottom = bottom;
-		},
+		// /* --- Getters and setters ---*/
+		// // Width and Height
+		// getWidthOrHeight(xy) {
+		// 	return this.xyConditional(xy, this.rect.width, this.rect.height);
+		// },
+		// getWidth() {
+		// 	return this.rect.width;
+		// },
+		// getHeight() {
+		// 	return this.rect.height;
+		// },
+		// setWidthOrHeight(xy, wh) {
+		// 	this.xyConditional(xy, this.setWidth.bind(this, wh), this.setHeight.bind(this, wh));
+		// },
+		// setWidth(width) {
+		// 	this.rect.width = width;
+		// },
+		// setHeight(height) {
+		// 	this.rect.height = height;
+		// },
+		//
+		// // MinWidth or MinHeight
+		// getMinWidthOrHeight(xy) {
+		// 	return this.xyConditional(xy, this.minW, this.minH);
+		// },
+		// getMinWidth() {
+		// 	return this.minW;
+		// },
+		// getMinHeight() {
+		// 	return this.minH;
+		// },
+		// setMinWidthOrHeight(xy, wh) {
+		// 	this.xyConditional(xy,
+		// 		this.setMinWidth.bind(this, wh),
+		// 		this.setMinHeight.bind(this, wh));
+		// },
+		// setMinWidth(width) {
+		// 	this.minW = width;
+		// },
+		// setMinHeight(height) {
+		// 	this.minH = height;
+		// },
+		//
+		// // MaxWidth or MaxHeight
+		// getMaxWidthOrHeight(xy) {
+		// 	return this.xyConditional(xy, this.getMaxWidth, this.getMaxHeight);
+		// },
+		// getMaxWidth() {
+		// 	return this.maxW - this.getLeft();
+		// },
+		// getMaxHeight() {
+		// 	return this.maxH - this.getTop();
+		// },
+		// setMaxWidthOrHeight(xy, wh) {
+		// 	this.xyConditional(xy,
+		// 		this.setMaxWidth.bind(this, wh),
+		// 		this.setMaxHeight.bind(this, wh));
+		// },
+		// setMaxWidth(width) {
+		// 	this.maxW = width;
+		// },
+		// setMaxHeight(height) {
+		// 	this.maxH = height;
+		// },
+		//
+		// // Left/Top
+		// getLeftOrTop(xy) {
+		// 	return this.xyConditional(xy, this.getLeft, this.getTop);
+		// },
+		// getLeft() {
+		// 	return this.rect.left;
+		// },
+		// getTop() {
+		// 	return this.rect.top;
+		// },
+		// setLeftOrTop(xy, lt) {
+		// 	this.xyConditional(xy, this.setLeft.bind(this, lt), this.setTop.bind(this, lt));
+		// },
+		// setLeft(left) {
+		// 	this.rect.left = left;
+		// },
+		// setTop(top) {
+		// 	this.rect.top = top;
+		// },
+		//
+		// // Right/Bottom
+		// getRightOrBottom(xy) {
+		// 	return this.xyConditional(xy, this.getRight, this.getBottom);
+		// },
+		// getRight() {
+		// 	return this.rect.right;
+		// },
+		// getBottom() {
+		// 	return this.rect.bottom;
+		// },
+		// setRightOrBottom(xy, rb) {
+		// 	this.xyConditional(xy, this.setRight.bind(this, rb), this.setBottom.bind(this, rb));
+		// },
+		// setRight(right) {
+		// 	this.rect.right = right;
+		// },
+		// setBottom(bottom) {
+		// 	this.rect.bottom = bottom;
+		// },
 
 		// Get parent methods
 		getParentWH(xy) {
