@@ -48,7 +48,6 @@ export default {
 		ParentRectMixin,
 		CursorPositionMixin,
 		WindowChangeMixin,
-		// PropMixins
 		GridMixin,
 		TransitionMixin,
 	],

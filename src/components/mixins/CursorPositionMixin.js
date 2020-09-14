@@ -5,11 +5,9 @@ export default {
 	}),
 	methods: {
 		getCursor(xy, e) {
-			return this.xyConditional(
-				xy,
-				this.getCursorX.bind(this, e),
-				this.getCursorY.bind(this, e),
-			);
+			const getX = this.getCursorX.bind(this, e);
+			const getY = this.getCursorY.bind(this, e);
+			return this.xyConditional(xy, getX, getY);
 		},
 		getCursorX(e) {
 			// Get cursor x-position
@@ -29,14 +27,14 @@ export default {
 			return this.xyConditional(xy, this.offsetX, this.offsetY);
 		},
 		setOffset(e) {
-			this.offsetX = this.getCursorX(e) - this.getLeft();
-			this.offsetY = this.getCursorY(e) - this.getTop();
+			this.setOffsetX(e);
+			this.setOffsetY(e);
 		},
 		setOffsetX(e) {
-			this.offsetX = this.getCursorX(e) - this.getLeft();
+			this.offsetX = this.getCursorX(e) - this.left;
 		},
 		setOffsetY(e) {
-			this.offsetY = this.getCursorY(e) - this.getTop();
+			this.offsetY = this.getCursorY(e) - this.top;
 		},
 		unsetOffset() {
 			this.offsetX = 0;
