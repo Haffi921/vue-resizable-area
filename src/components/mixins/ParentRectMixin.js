@@ -1,4 +1,8 @@
+import UtilityMixin from '@/components/mixins/UtilityMixin';
+import HTMLRectMixin from '@/components/mixins/HTMLRectMixin';
+
 export default {
+	mixins: [UtilityMixin, HTMLRectMixin],
 	props: {
 		restrictToParent: {
 			type: Boolean || Array[Boolean],
@@ -15,33 +19,30 @@ export default {
 	},
 	data: () => ({
 		parent: {},
-		parentElement: {},
+		restrictX: false,
+		restrictY: false,
 	}),
-	mounted() {
-		this.parentElement = this.$el.parentElement;
-		this.refreshParent();
-
-		// Right or bottom
+	created() {
 		if (this.restrictToParent) {
-			let restrict = [];
 			if (typeof this.restrictToParent === 'boolean') {
-				restrict = [this.restrictToParent, this.restrictToParent];
+				this.restrictX = this.restrictToParent;
+				this.restrictY = this.restrictToParent;
 			} else {
-				restrict = this.restrictToParent;
+				[this.restrictX, this.restrictY] = this.restrictToParent;
 			}
-			this.setMinLeft(restrict[0] ? 0 : -Infinity);
-			this.setMinTop(restrict[1] ? 0 : -Infinity);
-			this.setMaxRight(restrict[0] ? this.getParentW() : Infinity);
-			this.setMaxBottom(restrict[1] ? this.getParentH() : Infinity);
 		}
+	},
+	mounted() {
+		this.refreshParent();
 	},
 	methods: {
 		refreshParent() {
-			const padding = window.getComputedStyle(
-				this.parentElement,
-			).padding.match(/\d+/g).map((p) => parseInt(p, 10));
+			const parent = this.$el.parentElement;
+			const padding = window.getComputedStyle(parent).padding
+				.match(/\d+/g)
+				.map((p) => parseInt(p, 10));
 
-			this.parent = this.$el.parentNode.getBoundingClientRect();
+			this.parent = parent.getBoundingClientRect();
 			this.parent.padding = {
 				top: padding[0 % padding.length],
 				right: padding[1 % padding.length],
@@ -53,10 +54,16 @@ export default {
 			if (padding.length === 3) this.parent.padding.left = this.parent.padding.right;
 
 			if (this.restrictToParent) {
-				this.setMaxRight(this.getParentW());
-				this.setMaxBottom(this.getParentH());
+				if (this.restrictX) this.restrictArea('x');
+				if (this.restrictY) this.restrictArea('y');
 			}
 		},
+
+		restrictArea(xy) {
+			this.setMinLeftOrTop(xy, 0);
+			this.setMaxRightOrBottom(xy, this.getParentWH(xy));
+		},
+
 		getParentX() {
 			return this.parent.x + this.parent.padding.left;
 		},
