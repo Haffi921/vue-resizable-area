@@ -27,10 +27,11 @@
 
 <script>
 import { clamp, gte, gt } from 'lodash';
+import ResizeHandle from '@/components/ResizeHandle.vue';
 import HTMLRectMixin from '@/components/mixins/HTMLRectMixin';
 import ParentRectMixin from '@/components/mixins/ParentRectMixin';
 import GridMixin from '@/components/mixins/GridMixin';
-import ResizeHandle from '@/components/ResizeHandle.vue';
+import TransitionMixin from '@/components/mixins/TransitionMixin';
 
 const RectPropsMixin = {
 	props: {
@@ -107,6 +108,7 @@ export default {
 		HTMLRectMixin,
 		ParentRectMixin,
 		GridMixin,
+		TransitionMixin,
 	],
 	props: {
 		// Width of drag handles
@@ -127,23 +129,6 @@ export default {
 
 				return booleanCheck(value) || arrayCheck(value);
 			},
-		},
-
-		// Transition
-		transition: {
-			type: Boolean,
-			default: false,
-		},
-		tSpeed: {
-			type: Number,
-			default: 2000,
-			validator(value) {
-				return value > 0;
-			},
-		},
-		tFunction: {
-			type: String,
-			default: 'ease-in',
 		},
 	},
 	data: () => ({
@@ -292,20 +277,6 @@ export default {
 		setWindowChangeListeners() {
 			window.addEventListener('scroll', this.refreshParent);
 			window.addEventListener('resize', this.onWindowResize);
-		},
-
-		/* --- Props ---*/
-
-		// Transition methods
-		setUpTransition() {
-			const durationX = this.gridX / this.tSpeed;
-			const durationY = this.gridY / this.tSpeed;
-			const stringX = `${durationX}s ${this.tFunction}`;
-			const stringY = `${durationY}s ${this.tFunction}`;
-			const ruleX = `width ${stringX}, left ${stringX}`;
-			const ruleY = `height ${stringY}, top ${stringY}`;
-
-			this.$el.style.transition = `${ruleX}, ${ruleY}`;
 		},
 
 		/* --- Util methods ---*/
