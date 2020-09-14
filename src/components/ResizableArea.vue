@@ -27,11 +27,16 @@
 
 <script>
 import { clamp, gte, gt } from 'lodash';
+
+// Components
 import ResizeHandle from '@/components/ResizeHandle.vue';
+
+// Mixins
 import HTMLRectMixin from '@/components/mixins/HTMLRectMixin';
 import ParentRectMixin from '@/components/mixins/ParentRectMixin';
 import GridMixin from '@/components/mixins/GridMixin';
 import TransitionMixin from '@/components/mixins/TransitionMixin';
+import CursorPositionMixin from '@/components/mixins/CursorPositionMixin';
 
 const RectPropsMixin = {
 	props: {
@@ -109,6 +114,7 @@ export default {
 		ParentRectMixin,
 		GridMixin,
 		TransitionMixin,
+		CursorPositionMixin,
 	],
 	props: {
 		// Width of drag handles
@@ -143,10 +149,6 @@ export default {
 
 		// Paddings for cursor on handle
 		cursorPadding: 0,
-
-		// Offset XY Cords for free drag
-		offsetX: 0,
-		offsetY: 0,
 	}),
 	created() {
 		// Cursor padding is half the handle width
@@ -303,46 +305,6 @@ export default {
 				}
 			}
 			throw TypeError(`xy is ${xy} but it should be either 'x' or 'y'`);
-		},
-
-		// Get cursor methods
-		getCursor(xy, e) {
-			return this.xyConditional(
-				xy,
-				this.getCursorX.bind(this, e),
-				this.getCursorY.bind(this, e),
-			);
-		},
-		getCursorX(e) {
-			// Get cursor x-position
-			return e.clientX
-				// ...relative to the parent
-				- this.getParentX();
-		},
-		getCursorY(e) {
-			// Get cursor y-position
-			return e.clientY
-			// ...relative to the parent
-			- this.getParentY();
-		},
-
-		// Cursor offset
-		getOffset(xy) {
-			return this.xyConditional(xy, this.offsetX, this.offsetY);
-		},
-		setOffset(e) {
-			this.offsetX = this.getCursorX(e) - this.getLeft();
-			this.offsetY = this.getCursorY(e) - this.getTop();
-		},
-		setOffsetX(e) {
-			this.offsetX = this.getCursorX(e) - this.getLeft();
-		},
-		setOffsetY(e) {
-			this.offsetY = this.getCursorY(e) - this.getTop();
-		},
-		unsetOffset() {
-			this.offsetX = 0;
-			this.offsetY = 0;
 		},
 
 		/* --- Move methods ---*/
