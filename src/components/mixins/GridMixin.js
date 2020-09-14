@@ -23,6 +23,9 @@ export default {
 		gridY: 1,
 		gridB: 0,
 	}),
+	mounted() {
+		if (this.grid) this.setUpGrid();
+	},
 	methods: {
 		setUpGrid() {
 			// Calculate grid

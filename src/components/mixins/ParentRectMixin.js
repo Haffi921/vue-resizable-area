@@ -2,6 +2,9 @@ export default {
 	data: () => ({
 		parent: {},
 	}),
+	mounted() {
+		this.refreshParent();
+	},
 	methods: {
 		refreshParent() {
 			const padding = window.getComputedStyle(

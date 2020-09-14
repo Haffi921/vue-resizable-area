@@ -191,15 +191,6 @@ export default {
 		this.setMaxBottom(this.maxB ? this.maxB : this.getMaxBottom());
 	},
 	mounted() {
-		// Get parent
-		this.refreshParent();
-
-		// Grid
-		if (this.grid) this.setUpGrid();
-
-		// Transition
-		if (this.transition) this.setUpTransition();
-
 		// Initial set up of area
 		this.updateDOM();
 	},

@@ -16,6 +16,9 @@ export default {
 			default: 'ease-in',
 		},
 	},
+	mounted() {
+		if (this.transition) this.setUpTransition();
+	},
 	methods: {
 		setUpTransition() {
 			const durationX = this.gridX / this.tSpeed;
