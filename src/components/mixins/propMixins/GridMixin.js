@@ -1,11 +1,12 @@
 import { clamp } from 'lodash';
+import HTMLRectMixin from '@/components/mixins/HTMLRectMixin';
 
 export default {
+	mixins: [HTMLRectMixin],
 	props: {
 		// Grid
 		grid: {
 			type: Array,
-			// default: () => ([200, 200]),
 			validator(value) {
 				return value.length === 2 && value.every((xy) => xy > 0);
 			},
