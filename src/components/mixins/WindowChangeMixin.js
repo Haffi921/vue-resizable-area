@@ -13,7 +13,8 @@ export default {
 			let changed = false;
 
 			['x', 'y'].forEach((xy) => {
-				if (this.getWidthOrHeight(xy) > this.getMaxWidthOrHeight(xy)) {
+				// TODO: Fix this; not working functionally after HTMLRectMixin change
+				if (this.getRightOrBottom(xy) > this.getMaxRightOrBottom(xy)) {
 					changed = true;
 					this.reloadRect(xy);
 					if (this.grid) {
@@ -33,14 +34,20 @@ export default {
 
 		// Reload rects
 		reloadRect(xy) {
-			this.reloadWH(xy);
-			this.reloadLT(xy);
+			if (!this.reloadWH(xy)) {
+				this.reloadLT(xy);
+			}
 		},
 		reloadWH(xy) {
 			const min = this.getMinWidthOrHeight(xy);
 			const max = this.getMaxWidthOrHeight(xy);
 			const wh = this.getWidthOrHeight(xy);
-			this.setWidthOrHeight(xy, clamp(wh, min, max));
+			const newValue = clamp(wh, min, max);
+			if (wh === newValue) {
+				this.setWidthOrHeight(xy, clamp(wh, min, max));
+				return true;
+			}
+			return false;
 		},
 		reloadLT(xy) {
 			const min = this.getMinWidthOrHeight(xy);

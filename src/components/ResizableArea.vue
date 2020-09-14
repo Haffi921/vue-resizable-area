@@ -124,20 +124,6 @@ export default {
 			type: Number,
 			default: 6,
 		},
-
-		// Width / Height
-		restrictToParent: {
-			type: Boolean || Array[Boolean],
-			default: true,
-			validator(value) {
-				const booleanCheck = (bool) => (typeof bool === 'boolean');
-				const arrayCheck = (arr) => Array.isArray(arr)
-						&& arr.length === 2
-						&& arr.every(booleanCheck);
-
-				return booleanCheck(value) || arrayCheck(value);
-			},
-		},
 	},
 	data: () => ({
 		// Div creators
@@ -153,22 +139,9 @@ export default {
 		cursorPadding: 0,
 	}),
 	created() {
+		// TODO: Fix this mess
 		// Cursor padding is half the handle width
 		this.cursorPadding = Math.floor(this.handleWidth / 2);
-
-		// Right or bottom
-		if (this.restrictToParent) {
-			let restrict = [];
-			if (typeof this.restrictToParent === 'boolean') {
-				restrict = [this.restrictToParent, this.restrictToParent];
-			} else {
-				restrict = this.restrictToParent;
-			}
-			this.setMinLeft(restrict[0] ? 0 : -Infinity);
-			this.setMinTop(restrict[1] ? 0 : -Infinity);
-			// this.setMaxRight(restrict[0] ? this.getParentW() : Infinity);
-			// this.setMaxBottom(restrict[1] ? this.getParentH() : Infinity);
-		}
 
 		// Width and Height
 		this.setWidth(this.W);
@@ -179,7 +152,6 @@ export default {
 		// Width and Height max
 		this.setMaxWidth(this.maxW);
 		this.setMaxHeight(this.maxH);
-
 		// Left and Top
 		this.setLeft(this.L);
 		this.setTop(this.T);
@@ -213,7 +185,7 @@ export default {
 			this.setBottom(top + height);
 		},
 		getRemainingWidth() {
-			this.getMaxRight();
+			this.getParentW();
 			// const a = this. - this.getLeft()
 		},
 
