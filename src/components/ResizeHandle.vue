@@ -4,60 +4,63 @@
 		:class="'handle-' + type"
 		:style="cssVars"
 		draggable="false">
-		<div v-if="corner" class="vertical"></div>
-		<div v-if="corner" class="horizontal"></div>
 	</div>
 </template>
 
 <script>
-const props = {
-	downFunction: {
-		type: Function,
-	},
-	moveFunction: {
-		type: Function,
-		required: true,
-	},
-	upFunction: {
-		type: Function,
-	},
-	width: {
-		type: Number,
-		default: 6,
-	},
-	corner: {
-		type: Boolean,
-		default: false,
-	},
-	type: {
-		type: String,
-		required: true,
-		validator(value) {
-			return [
-				'left', 'top', 'right', 'bottom',
-				'top-left', 'top-right',
-				'bottom-right', 'bottom-left',
-				'bar',
-			].includes(value);
+export default {
+	props: {
+		downFunction: {
+			type: Function,
+		},
+		moveFunction: {
+			type: Function,
+			required: true,
+		},
+		upFunction: {
+			type: Function,
+		},
+		width: {
+			type: Number,
+			default: 6,
+		},
+		corner: {
+			type: Boolean,
+			default: false,
+		},
+		type: {
+			type: String,
+			required: true,
+			validator(value) {
+				return [
+					'left', 'top', 'right', 'bottom',
+					'top-left', 'top-right',
+					'bottom-right', 'bottom-left',
+					'bar',
+				].includes(value);
+			},
 		},
 	},
-};
-
-const computed = {
-	cssVars() {
-		return {
-			'--width': `${this.width}px`,
-		};
+	computed: {
+		cssVars() {
+			return {
+				'--width': `${this.width}px`,
+			};
+		},
 	},
-};
-
-export default {
-	props,
-	computed,
 	mounted() {
+		if (this.corner) {
+			this.createChild('vertical');
+			this.createChild('horizontal');
+		}
 		this.$el.addEventListener('mousedown', this.onDown);
 	},
 	methods: {
+		createChild(className, elem = 'div') {
+			const child = document.createElement(elem);
+			child.className = className;
+			this.$el.appendChild(child);
+		},
 		onDown(e) {
 			window.addEventListener('mousemove', this.moveFunction);
 			window.addEventListener('mouseup', this.onUp);
